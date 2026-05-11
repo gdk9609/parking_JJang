@@ -1,0 +1,2448 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예약 기반 무인 주차관리 시스템</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --bg-color: #e5e7eb;
+            --screen-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --border-color: #e5e7eb;
+            --card-bg: #f9fafb;
+            --disabled-color: #9ca3af;
+            --admin-color: #1f2937;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans KR', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            background-color: var(--screen-bg);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 20px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #fff;
+            flex-shrink: 0;
+        }
+
+        .header .back-btn {
+            position: absolute;
+            left: 20px;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+        }
+
+        .main-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            background-color: var(--screen-bg);
+        }
+
+        .page.active {
+            display: flex;
+            animation: fadeSlideIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 80px;
+            scrollbar-width: none;
+        }
+
+        .content::-webkit-scrollbar {
+            display: none;
+        }
+
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0 24px;
+            background-color: #fff;
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-sub);
+            cursor: pointer;
+            width: 25%;
+        }
+
+        .nav-item.active {
+            color: var(--primary-color);
+        }
+
+        .nav-item i {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .floating-refresh {
+            position: absolute;
+            bottom: 90px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            cursor: pointer;
+            z-index: 100;
+            transition: transform 0.2s;
+        }
+
+        .floating-refresh:active {
+            transform: scale(0.9);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 20px 0 10px;
+            color: var(--text-main);
+        }
+
+        .card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            background-color: #fff;
+            transition: background-color 0.2s;
+        }
+
+        .card:active {
+            background-color: var(--card-bg);
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background-color: #eff6ff;
+            color: var(--primary-color);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+
+        .card-text h4 {
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: var(--text-main);
+        }
+
+        .card-text p {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .btn-primary {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: #fff;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:active {
+            opacity: 0.8;
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--disabled-color);
+            cursor: not-allowed;
+        }
+
+        .btn-outline {
+            width: 100%;
+            background-color: #fff;
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+        }
+
+        .blue-card {
+            background-color: var(--primary-color);
+            color: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .admin-card {
+            background-color: var(--admin-color);
+            color: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+        }
+
+        .info-row strong {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 16px 0;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .input-group label .req {
+            color: var(--danger-color);
+            margin-left: 2px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            background-color: #fff;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary-color);
+        }
+
+        select.input-field {
+            appearance: none;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%236b7280" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>') no-repeat right 16px center;
+            background-size: 12px;
+        }
+
+        .notice-text {
+            font-size: 12px;
+            color: var(--danger-color);
+            margin-bottom: 16px;
+            line-height: 1.4;
+            background: #fef2f2;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .result-box {
+            display: none;
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--primary-color);
+            background-color: #eff6ff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .result-box.active {
+            display: block;
+            animation: fadeSlideIn 0.3s ease;
+        }
+
+        .timer-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--danger-color);
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.2s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: #fff;
+            width: 85%;
+            max-height: 80%;
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-sub);
+        }
+
+        .admin-table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .admin-table {
+            width: 100%;
+            min-width: 400px;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .admin-table th {
+            background-color: var(--card-bg);
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .admin-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 주차 타워 탭 스타일 */
+        .tower-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tower-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-sub);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tower-tab.active {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+
+        .tower-info-content {
+            display: none;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .tower-info-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tower-mini-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 8px;
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .fee-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        /* 커스텀 셀렉트(스크롤 길이 제한용) 스타일 */
+        .custom-select-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .custom-select-trigger {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #fff;
+            color: var(--text-sub);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .custom-select-trigger.selected {
+            color: var(--text-main);
+        }
+
+        .custom-select-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 160px;
+            /* ★ 핵심: 드롭다운 스크롤 길이 제한 */
+            overflow-y: auto;
+            z-index: 999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .custom-select-options.open {
+            display: block;
+        }
+
+        .custom-option {
+            padding: 10px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-main);
+            transition: background 0.2s;
+        }
+
+        .custom-option:hover {
+            background: #eff6ff;
+            color: var(--primary-color);
+        }
+
+
+        /* 관리자 대시보드 개선 스타일 */
+        .admin-hero {
+            background: linear-gradient(135deg, #111827, #374151);
+            color: #fff;
+            border-radius: 18px;
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: 0 10px 24px rgba(17, 24, 39, 0.18);
+        }
+
+        .admin-hero h2 {
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        .admin-hero p {
+            font-size: 12px;
+            opacity: 0.82;
+            line-height: 1.5;
+        }
+
+        .admin-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .admin-mini-stat {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+
+        .admin-mini-stat span {
+            display: block;
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        .admin-mini-stat strong {
+            font-size: 17px;
+            color: var(--text-main);
+        }
+
+        .admin-tower-card {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .admin-tower-card:active {
+            transform: scale(0.985);
+            background: var(--card-bg);
+        }
+
+        .admin-tower-card:hover {
+            border-color: #bfdbfe;
+            box-shadow: 0 8px 18px rgba(59, 130, 246, 0.08);
+        }
+
+        .admin-tower-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .admin-tower-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .admin-tower-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .admin-tower-title h3 {
+            font-size: 16px;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .admin-tower-title p {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .admin-status-pill {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            color: #374151;
+            white-space: nowrap;
+        }
+
+        .admin-status-pill.good {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .admin-status-pill.normal {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .admin-status-pill.busy {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .admin-card-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .admin-card-stats div {
+            text-align: center;
+        }
+
+        .admin-card-stats span {
+            display: block;
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+        }
+
+        .admin-card-stats strong {
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .admin-total-sales-box {
+            background: linear-gradient(135deg, #ecfdf5, #ffffff);
+            border: 1px solid #a7f3d0;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+
+        .admin-total-sales-box p {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+        }
+
+        .admin-total-sales-box strong {
+            display: block;
+            font-size: 26px;
+            color: var(--success-color);
+        }
+
+        .admin-detail-top {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .admin-detail-top h2 {
+            font-size: 22px;
+            margin-bottom: 6px;
+        }
+
+        .admin-detail-top p {
+            font-size: 12px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .admin-section-card {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+
+        .admin-section-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .admin-section-title-row h3 {
+            font-size: 15px;
+            color: var(--text-main);
+        }
+
+        .admin-section-title-row span {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .admin-action-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 7px 9px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            background: var(--primary-color);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .admin-action-btn:active {
+            opacity: 0.8;
+        }
+
+        .admin-action-btn.disabled {
+            background: var(--disabled-color);
+            cursor: default;
+        }
+
+        .admin-empty-row {
+            text-align: center;
+            color: var(--text-sub);
+            padding: 18px !important;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 헤더 -->
+        <div class="header" id="global-header">
+            <i class="fas fa-chevron-left back-btn" id="global-back-btn" style="display: none;"></i>
+            <span id="global-header-title">무인 주차 시스템</span>
+        </div>
+
+        <!-- 메인 화면 영역 -->
+        <div class="main-area">
+
+            <!-- 1. 홈화면 -->
+            <div id="page-home" class="page active">
+                <div class="content">
+                    <div class="blue-card" style="padding: 30px 20px; margin-top: 10px;">
+                        <h2 style="font-size: 24px; margin-bottom:10px;">스마트 예약 주차</h2>
+                        <p style="opacity: 0.9; font-size: 14px;">방문 전 예약 필수! 빠르게 이용하세요.</p>
+                    </div>
+                    <div class="section-title">메인 메뉴</div>
+                    <div class="card" onclick="goToPage('page-use-menu')">
+                        <div class="card-icon"><i class="fas fa-car-side"></i></div>
+                        <div class="card-text" style="flex:1;">
+                            <h4>주차장 이용</h4>
+                            <p>입차 및 사전 예약하기</p>
+                        </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                    </div>
+                    <div class="card" onclick="goToPage('page-search')">
+                        <div class="card-icon" style="color: #f59e0b; background-color: #fef3c7;"><i
+                                class="fas fa-search"></i></div>
+                        <div class="card-text" style="flex:1;">
+                            <h4>조회 및 변경</h4>
+                            <p>주차/예약 상태 확인 및 제한시간 조회</p>
+                        </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                    </div>
+                    <div class="card" onclick="goToPage('page-settle-main')">
+                        <div class="card-icon" style="color: #8b5cf6; background-color: #f5f3ff;"><i
+                                class="fas fa-credit-card"></i></div>
+                        <div class="card-text" style="flex:1;">
+                            <h4>출차 및 정산</h4>
+                            <p>주차 요금 정산 및 출차 결제</p>
+                        </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                    </div>
+                    <div class="card" onclick="goToPage('page-info')">
+                        <div class="card-icon" style="color: #10b981; background-color: #ecfdf5;"><i
+                                class="fas fa-info-circle"></i></div>
+                        <div class="card-text" style="flex:1;">
+                            <h4>정보 확인</h4>
+                            <p>요금표 및 실시간 타워 현황 조회</p>
+                        </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1-1. 주차장 이용 메뉴 -->
+            <div id="page-use-menu" class="page">
+                <div class="content">
+                    <p style="margin: 10px 0 20px; font-weight: 500; font-size: 14px;">원하시는 서비스를 선택해주세요.</p>
+                    <div class="card" onclick="goToPage('page-reserve')">
+                        <div class="card-icon" style="background: transparent;"><i class="far fa-calendar-check"
+                                style="font-size: 24px; color: var(--primary-color);"></i></div>
+                        <div class="card-text" style="flex:1;">
+                            <h4>예약하기 (필수)</h4>
+                            <p>주차 타워를 미리 예약하세요.</p>
+                        </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                    </div>
+                    <div class="card" onclick="goToPage('page-entry')">
+                        <div class="card-icon" style="background: transparent;"><i class="fas fa-sign-in-alt"
+                                style="font-size: 24px; color: var(--text-main);"></i></div>
+                        <div class="card-text" style="flex:1;">
+                            <h4>입차하기</h4>
+                            <p>발급받은 예약번호로 입차합니다.</p>
+                        </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 예약 폼 -->
+            <div id="page-reserve" class="page">
+                <div class="content">
+                    <div class="notice-text">
+                        <i class="fas fa-exclamation-circle"></i> <strong>예약 안내</strong><br>
+                        - 예약 후 <strong>20분 이내</strong>에 입차하지 않으면 자동 취소됩니다.<br>
+                        - 예약 보증금 <strong>2,000원</strong>이 발생하며, 정상 정산 시 차감되나 시간 초과 취소 시 환불되지 않습니다.
+                    </div>
+                    <form onsubmit="submitReserve(event)">
+                        <div class="input-group">
+                            <label>차량번호<span class="req">*</span></label>
+                            <input type="text" id="reserve-car-number" class="input-field" placeholder="예: 12가3456" required>
+                        </div>
+                        <div class="input-group">
+                            <label>전화번호<span class="req">*</span></label>
+                            <input type="tel" id="reserve-phone" class="input-field" placeholder="010-0000-0000" required>
+                        </div>
+                        <div class="input-group">
+                            <label>차종 선택<span class="req">*</span></label>
+                            <select id="reserve-car-type" class="input-field" required>
+                                <option value="" disabled selected>차종을 선택하세요</option>
+                                <option value="경차">경차</option>
+                                <option value="중형차">중형차</option>
+                                <option value="SUV">SUV</option>
+                                <option value="대형차">대형차</option>
+                                <option value="전기차">전기차</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>주차타워 (추천 타워 우선)</label>
+                            <select id="reserve-tower" class="input-field" required>
+                                <option value="A Tower" data-operating="24시간 운영">A Tower (여유)</option>
+                                <option value="B Tower" data-operating="24시간 운영">B Tower (보통)</option>
+                                <option value="C Tower" data-operating="24시간 운영">C Tower (혼잡)</option>
+                            </select>
+                        </div>
+                        <hr>
+                        <div class="input-group">
+                            <label>보증금 결제 수단 (2,000원)<span class="req">*</span></label>
+                            <select class="input-field" required>
+                                <option value="" disabled selected>결제 수단을 선택하세요</option>
+                                <option>신용/체크카드</option>
+                                <option>모바일 간편결제 (카카오/네이버페이)</option>
+                                <option>휴대폰 소액결제</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 10px;">결제 및 예약 완료</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 예약 완료 페이지 -->
+            <div id="page-reservation-complete" class="page">
+                <div class="content" style="text-align: center;">
+                    <div
+                        style="width: 72px; height: 72px; background: var(--success-color); color: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 38px; margin: 28px auto 18px; box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28);">
+                        <i class="fas fa-check"></i>
+                    </div>
+
+                    <h2 style="font-size: 26px; color: var(--text-main); margin-bottom: 10px;">예약이 완료되었습니다</h2>
+                    <p style="font-size: 14px; color: var(--text-sub); line-height: 1.6; margin-bottom: 22px;">
+                        고객님의 예약번호는
+                        <strong id="complete-code-inline" style="color: var(--primary-color); font-size: 16px;"></strong>이며<br>
+                        입력하신 전화번호의 카카오톡/SMS로 발송되었습니다.
+                    </p>
+
+                    <div
+                        style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 18px; padding: 22px 16px; margin-bottom: 18px;">
+                        <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 6px;">예약번호</p>
+                        <div id="complete-code-big"
+                            style="font-size: 36px; font-weight: 800; color: var(--primary-color); letter-spacing: 2px;">
+                        </div>
+                    </div>
+
+                    <div
+                        style="text-align: left; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px; margin-bottom: 16px;">
+                        <h3
+                            style="font-size: 16px; color: var(--text-main); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                            예약 상세 정보
+                        </h3>
+
+                        <div class="info-row"><span>예약번호</span><strong id="complete-reservation-no"></strong></div>
+                        <div class="info-row"><span>차량번호</span><strong id="complete-car-number"></strong></div>
+                        <div class="info-row"><span>전화번호</span><strong id="complete-phone-number"></strong></div>
+                        <div class="info-row"><span>차종</span><strong id="complete-car-type"></strong></div>
+                        <div class="info-row"><span>주차타워</span><strong id="complete-parking-tower"></strong></div>
+                        <div class="info-row"><span>운영시간</span><strong id="complete-operating-hours"></strong></div>
+                        <div class="info-row"><span>예약시각</span><strong id="complete-reserve-time"></strong></div>
+                        <div class="info-row"><span>예약 제한시간</span><strong id="complete-limit-time"></strong></div>
+                        <div class="info-row" style="margin-bottom: 0;"><span>예약보증금</span><strong id="complete-deposit"
+                                style="color: var(--primary-color);"></strong></div>
+                    </div>
+
+                    <div class="notice-text" style="text-align: left; margin-bottom: 18px;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        예약 후 <strong>20분 이내</strong>에 입차하지 않으면 자동 취소됩니다.<br>
+                        시간 초과 취소 시 예약 보증금은 환불되지 않습니다.
+                    </div>
+
+                    <button class="btn-primary" onclick="goToPage('page-entry')">
+                        <i class="fas fa-sign-in-alt"></i> 입차하러 가기
+                    </button>
+                    <button class="btn-outline" onclick="goToPage('page-home')">홈으로 돌아가기</button>
+                </div>
+            </div>
+
+            <!-- 입차 폼 -->
+            <div id="page-entry" class="page">
+                <div class="content">
+                    <div class="notice-text" style="background:#eff6ff; color:var(--text-main);">
+                        입차는 예약 완료 후 문자로 발송된 <strong>예약번호</strong>가 있어야만 가능합니다.
+                    </div>
+                    <form onsubmit="submitEntry(event)">
+                        <div class="input-group">
+                            <label>예약번호<span class="req">*</span></label>
+                            <input type="text" class="input-field" placeholder="예: A1234" required>
+                        </div>
+                        <div class="input-group">
+                            <label>차량번호<span class="req">*</span></label>
+                            <input type="text" class="input-field" placeholder="예: 12가3456" required>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 24px;">입차 처리</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 4. 조회하기 화면 (예약번호 입력) -->
+            <div id="page-search" class="page">
+                <div class="content">
+                    <p style="font-size: 14px; margin-bottom: 20px;">예약번호를 입력하여 상태를 조회하세요.</p>
+                    <form onsubmit="handleSearch(event)">
+                        <div class="input-group">
+                            <label>예약번호<span class="req">*</span></label>
+                            <input type="text" id="search-input" class="input-field" placeholder="(관리자 접속: admin)"
+                                required autocomplete="off">
+                        </div>
+                        <button type="submit" id="btn-search-exec" class="btn-primary">조회하기</button>
+                        <div style="text-align: center; margin-top: 16px;">
+                            <a href="#" onclick="goToPage('page-find-res')"
+                                style="font-size: 13px; color: var(--primary-color); text-decoration: underline;">예약번호를
+                                잊으셨나요?</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 새로 분리된 예약/입차 상세 정보 페이지 -->
+            <div id="page-reservation-detail" class="page">
+                <div class="content">
+                    <!-- 조회 결과: 예약 중 상태 -->
+                    <div id="detail-reserved" style="display: none;">
+                        <div class="result-box active"
+                            style="border-color: #f59e0b; background-color: #fef3c7; margin-top: 0;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f59e0b; padding-bottom: 10px; margin-bottom: 12px;">
+                                <h3 style="font-size: 16px; color: #b45309;">예약 완료</h3>
+                                <span
+                                    style="font-size: 12px; background: #f59e0b; color: #fff; padding: 4px 8px; border-radius: 4px;">입차
+                                    대기중</span>
+                            </div>
+                            <div class="timer-text">입차 제한시간: 18분 42초</div>
+                            <p style="text-align: center; font-size:12px; color:#b45309; margin-bottom:16px;">시간 내 미입차 시
+                                자동 취소됩니다.</p>
+                            <div class="info-row"><span>차량번호</span><strong style="color:#78350f;">12가3456</strong></div>
+                            <div class="info-row"><span>배정 타워</span><strong style="color:#78350f;">A Tower</strong>
+                            </div>
+                            <div class="info-row"><span>예약 차종</span><strong style="color:#78350f;">SUV</strong></div>
+                            <div style="display:flex; gap:8px; margin-top:20px;">
+                                <button class="btn-primary" style="flex:1; background-color: var(--danger-color);"
+                                    onclick="handleCancelReservation()">예약 취소</button>
+                                <button class="btn-outline" style="flex:1; margin-top:0;"
+                                    onclick="alert('타워 변경 메뉴로 이동합니다.')">타워 변경</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 조회 결과: 입차 완료 상태 -->
+                    <div id="detail-entered" style="display: none;">
+                        <div class="result-box active"
+                            style="border-color: var(--success-color); background-color: #ecfdf5; margin-top: 0;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--success-color); padding-bottom: 10px; margin-bottom: 12px;">
+                                <h3 style="font-size: 16px; color: var(--success-color);">입차 완료</h3>
+                                <span
+                                    style="font-size: 12px; background: var(--success-color); color: white; padding: 4px 8px; border-radius: 4px;">주차
+                                    중</span>
+                            </div>
+                            <div class="info-row"><span>예약번호</span><strong>A1234</strong></div>
+                            <div class="info-row"><span>차량번호</span><strong>12가3456</strong></div>
+                            <div class="info-row"><span>현재 위치</span><strong>A Tower</strong></div>
+                            <div class="info-row"><span>입차 시간</span><strong>14:30:00</strong></div>
+                            <div class="info-row"><span>경과 시간</span><strong>1시간 20분</strong></div>
+                            <hr style="border-color: #a7f3d0;">
+                            <div class="info-row" style="margin-bottom:0;"><span>현재 예상 요금</span><strong
+                                    style="color:var(--success-color); font-size:16px;">4,000원</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 예약번호 찾기 페이지 -->
+            <div id="page-find-res" class="page">
+                <div class="content">
+                    <p style="font-size: 14px; margin-bottom: 20px;">본인 확인을 위해 차량번호와 전화번호를 입력해주세요.</p>
+                    <form onsubmit="handleFindRes(event)">
+                        <div class="input-group">
+                            <label>차량번호<span class="req">*</span></label>
+                            <input type="text" id="find-car" class="input-field" placeholder="예: 12가3456" required>
+                        </div>
+                        <div class="input-group">
+                            <label>전화번호<span class="req">*</span></label>
+                            <input type="tel" id="find-phone" class="input-field" placeholder="010-0000-0000" required>
+                        </div>
+                        <button type="submit" id="btn-find-exec" class="btn-primary">예약번호 찾기</button>
+                    </form>
+
+                    <!-- 찾기 결과 영역 -->
+                    <div id="result-find-res" class="result-box">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; margin-bottom: 12px;">
+                            <h3 style="font-size: 16px; color: var(--primary-color);">조회 완료</h3>
+                            <span
+                                style="font-size: 12px; background: var(--primary-color); color: white; padding: 4px 8px; border-radius: 4px;">예약
+                                상태</span>
+                        </div>
+                        <p style="font-size: 13px; margin-bottom: 16px; line-height: 1.5;">
+                            고객님의 예약번호는 <strong style="color:var(--primary-color); font-size:16px;">A1234</strong>
+                            입니다.<br>
+                            아직 입차 전이므로 제한시간 내에 입차해주세요.
+                        </p>
+                        <div class="info-row"><span>차량번호</span><strong>12가3456</strong></div>
+                        <div class="info-row"><span>배정 타워</span><strong>A Tower</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ★ 계산기 페이지 (스크롤 길이 제한된 커스텀 드롭다운 적용) -->
+            <div id="page-calculator" class="page">
+                <div class="content">
+                    <div
+                        style="background: var(--primary-color); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="font-size:16px; margin-bottom:8px;"><i class="fas fa-calculator"></i> 예상 주차요금 계산기
+                        </h3>
+                        <p style="font-size:12px; opacity:0.9;">기본 1시간 2,000원 / 추가 10분당 300원</p>
+                    </div>
+
+                    <form onsubmit="handleCalculate(event)">
+                        <!-- 예상 입차 일시 -->
+                        <div class="input-group">
+                            <label>예상 입차 일시<span class="req">*</span></label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="date" class="input-field" style="flex: 2;" required>
+
+                                <!-- 커스텀 시 선택 -->
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger" id="entry-hour-trigger">
+                                        <span>시</span><i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="custom-select-options" id="entry-hour-opts"></div>
+                                    <input type="hidden" id="entry-hour-val" required>
+                                </div>
+
+                                <!-- 커스텀 분 선택 -->
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger" id="entry-min-trigger">
+                                        <span>분</span><i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="custom-select-options" id="entry-min-opts"></div>
+                                    <input type="hidden" id="entry-min-val" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 예상 출차 일시 -->
+                        <div class="input-group">
+                            <label>예상 출차 일시<span class="req">*</span></label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="date" class="input-field" style="flex: 2;" required>
+
+                                <!-- 커스텀 시 선택 -->
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger" id="exit-hour-trigger">
+                                        <span>시</span><i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="custom-select-options" id="exit-hour-opts"></div>
+                                    <input type="hidden" id="exit-hour-val" required>
+                                </div>
+
+                                <!-- 커스텀 분 선택 -->
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger" id="exit-min-trigger">
+                                        <span>분</span><i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="custom-select-options" id="exit-min-opts"></div>
+                                    <input type="hidden" id="exit-min-val" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btn-calc-exec" class="btn-primary" style="margin-top: 10px;">예상 요금
+                            확인</button>
+                    </form>
+
+                    <!-- 계산 결과 영역 -->
+                    <div id="result-calc" class="result-box" style="border-color: var(--primary-color);">
+                        <div style="text-align: center; margin-bottom: 16px;">
+                            <span style="font-size: 13px; color: var(--text-sub);">예상 총 주차요금</span>
+                            <div
+                                style="font-size: 28px; font-weight: bold; color: var(--primary-color); margin-top: 4px;">
+                                8,300원</div>
+                        </div>
+                        <hr>
+                        <div class="info-row"><span>예상 주차 시간</span><strong>3시간 30분</strong></div>
+                        <div class="info-row"><span>기본 요금 (1시간)</span><strong>2,000원</strong></div>
+                        <div class="info-row" style="margin-bottom:0;"><span>추가 요금 (150분)</span><strong>6,300원</strong>
+                        </div>
+                        <p style="font-size: 11px; color: var(--danger-color); margin-top: 16px; text-align: center;">
+                            * 실제 요금은 실제 입/출차 시간에 따라 달라질 수 있습니다.<br>
+                            * 예약 보증금 2,000원은 정산 시 위 요금에서 차감됩니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. 출차/정산 입력 -->
+            <div id="page-settle-main" class="page">
+                <div class="content">
+                    <p style="font-size: 14px; margin-bottom: 16px;">정산을 위해 예약번호를 입력해주세요.</p>
+                    <form onsubmit="searchParkingFee(event)">
+                        <div class="input-group">
+                            <label>예약번호<span class="req">*</span></label>
+                            <input type="text" class="input-field" required>
+                        </div>
+                        <button type="submit" class="btn-primary">주차 요금 확인</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 5-1. 요금 확인 및 결제 -->
+            <div id="page-settle-detail" class="page">
+                <div class="content">
+                    <div
+                        style="background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 16px; margin-bottom: 16px; text-align: center;">주차 요금 정산</h3>
+                        <div class="info-row"><span>이용 시간</span><strong>1시간 20분</strong></div>
+                        <div class="info-row"><span>총 주차요금</span><strong>4,000원</strong></div>
+                        <div class="info-row"><span>예약 보증금 차감</span><strong
+                                style="color:var(--danger-color);">-2,000원</strong></div>
+                        <hr>
+                        <div class="info-row" style="margin-bottom: 0; align-items:center;">
+                            <span>출차 시 결제 금액</span>
+                            <strong style="font-size: 24px; color: var(--primary-color);">2,000원</strong>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>출차 결제 수단 선택</label>
+                        <select class="input-field" id="pay-method">
+                            <option>신용/체크카드</option>
+                            <option>현금결제 (무인기 투입)</option>
+                            <option>모바일 간편결제</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-primary" style="margin-top:20px;" onclick="goToPage('page-receipt')">결제
+                        진행하기</button>
+                </div>
+            </div>
+
+            <!-- 영수증 -->
+            <div id="page-receipt" class="page">
+                <div class="content" style="text-align: center;">
+                    <div
+                        style="width: 60px; height: 60px; background: var(--success-color); color: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 28px; margin: 30px auto 20px;">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h3 style="margin-bottom: 8px;">결제 완료 및 출차 처리</h3>
+                    <p style="font-size:13px; color:var(--text-sub); margin-bottom:30px;">영수증 번호: E20250101143000</p>
+
+                    <div style="text-align: left; background:var(--card-bg); padding:16px; border-radius:8px;">
+                        <div class="info-row"><span>최종 결제 금액</span><strong>2,000원</strong></div>
+                        <div class="info-row"><span>결제 수단</span><strong id="receipt-method">신용카드</strong></div>
+                        <div class="info-row" style="margin-bottom:0;"><span>차량번호</span><strong>12가3456</strong></div>
+                    </div>
+
+                    <button class="btn-outline" style="margin-top: 30px;" onclick="goToPage('page-home')">홈으로
+                        돌아가기</button>
+                </div>
+            </div>
+
+            <!-- 6. 정보 확인 (타워별 탭 및 가능대수/전체대수 반영) -->
+            <div id="page-info" class="page">
+                <div class="content">
+                    <div class="section-title" style="margin-top: 0;">주차 타워 정보 및 예약 현황</div>
+
+                    <!-- 타워 선택 탭 -->
+                    <div class="tower-tabs">
+                        <button class="tower-tab active" onclick="showTowerInfo('A', this)">A Tower</button>
+                        <button class="tower-tab" onclick="showTowerInfo('B', this)">B Tower</button>
+                        <button class="tower-tab" onclick="showTowerInfo('C', this)">C Tower</button>
+                    </div>
+
+                    <!-- A Tower 상세 정보 -->
+                    <div id="tower-info-A" class="tower-info-content active">
+                        <h3 style="font-size: 15px; margin-bottom: 12px;">A Tower <span class="tower-mini-tag"
+                                style="background:#dcfce7; color:#166534;">여유</span></h3>
+
+                        <!-- 타워별 공통 요금표 배치 -->
+                        <div class="fee-box">
+                            <p style="font-size: 12px; font-weight: 600; color:var(--text-main); margin-bottom: 8px;"><i
+                                    class="fas fa-coins"></i> 이용 요금 안내</p>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>기본 1시간</span><strong>2,000원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>추가 10분당</span><strong>300원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 0;"><span>1일 최대
+                                    요금</span><strong>30,000원</strong></div>
+                        </div>
+
+                        <div class="info-row"><span>운영시간</span><strong>24시간 운영</strong></div>
+                        <div class="info-row"><span>총 수용 대수</span><strong>20대</strong></div>
+                        <hr>
+                        <p style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">차종별 예약 가능 현황 (가능 / 전체)</p>
+                        <div class="info-row"><span>경차</span><strong>3 / 3대</strong></div>
+                        <div class="info-row"><span>중형차</span><strong>5 / 6대</strong></div>
+                        <div class="info-row"><span>SUV</span><strong>2 / 4대</strong></div>
+                        <div class="info-row"><span>대형차</span><strong style="color:var(--danger-color);">만차 (0 /
+                                2대)</strong></div>
+                        <div class="info-row" style="margin-bottom:0;"><span>전기차</span><strong>2 / 5대</strong></div>
+                        <div
+                            style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb; display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; font-weight: 600;">현재 예약 가능</span>
+                            <strong style="color: var(--primary-color);">총 12 / 20대</strong>
+                        </div>
+                    </div>
+
+                    <!-- B Tower 상세 정보 -->
+                    <div id="tower-info-B" class="tower-info-content">
+                        <h3 style="font-size: 15px; margin-bottom: 12px;">B Tower <span class="tower-mini-tag">보통</span>
+                        </h3>
+
+                        <div class="fee-box">
+                            <p style="font-size: 12px; font-weight: 600; color:var(--text-main); margin-bottom: 8px;"><i
+                                    class="fas fa-coins"></i> 이용 요금 안내</p>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>기본 1시간</span><strong>2,000원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>추가 10분당</span><strong>300원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 0;"><span>1일 최대
+                                    요금</span><strong>30,000원</strong></div>
+                        </div>
+
+                        <div class="info-row"><span>운영시간</span><strong>24시간 운영</strong></div>
+                        <div class="info-row"><span>총 수용 대수</span><strong>50대</strong></div>
+                        <hr>
+                        <p style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">차종별 예약 가능 현황 (가능 / 전체)</p>
+                        <div class="info-row"><span>경차</span><strong>1 / 8대</strong></div>
+                        <div class="info-row"><span>중형차</span><strong>2 / 17대</strong></div>
+                        <div class="info-row"><span>SUV</span><strong>1 / 10대</strong></div>
+                        <div class="info-row"><span>대형차</span><strong>1 / 5대</strong></div>
+                        <div class="info-row" style="margin-bottom:0;"><span>전기차</span><strong
+                                style="color:var(--danger-color);">만차 (0 / 10대)</strong></div>
+                        <div
+                            style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb; display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; font-weight: 600;">현재 예약 가능</span>
+                            <strong style="color: var(--primary-color);">총 5 / 50대</strong>
+                        </div>
+                    </div>
+
+                    <!-- C Tower 상세 정보 -->
+                    <div id="tower-info-C" class="tower-info-content">
+                        <h3 style="font-size: 15px; margin-bottom: 12px;">C Tower <span class="tower-mini-tag"
+                                style="background:#fee2e2; color:#991b1b;">혼잡</span></h3>
+
+                        <div class="fee-box">
+                            <p style="font-size: 12px; font-weight: 600; color:var(--text-main); margin-bottom: 8px;"><i
+                                    class="fas fa-coins"></i> 이용 요금 안내</p>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>기본 1시간</span><strong>2,000원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>추가 10분당</span><strong>300원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 0;"><span>1일 최대
+                                    요금</span><strong>30,000원</strong></div>
+                        </div>
+
+                        <div class="info-row"><span>운영시간</span><strong>24시간 운영</strong></div>
+                        <div class="info-row"><span>총 수용 대수</span><strong>70대</strong></div>
+                        <hr>
+                        <p style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">차종별 예약 가능 현황 (가능 / 전체)</p>
+                        <div class="info-row" style="margin-bottom:0;"><span>전 차종</span><strong
+                                style="color:var(--danger-color);">만차 (0 / 전체)</strong></div>
+                        <div
+                            style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb; display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; font-weight: 600; color:var(--danger-color);">현재 예약 가능</span>
+                            <strong style="color: var(--danger-color);">총 0 / 70대</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 관리자 페이지 -->
+            <div id="page-admin" class="page">
+                <div class="content">
+                    <div class="admin-hero">
+                        <h2>시스템 관리자 메뉴</h2>
+                        <p>주차타워별 예약·입차 현황과 매출을 한눈에 확인하고, 각 타워별 상세 관리 화면으로 이동할 수 있습니다.</p>
+                    </div>
+
+                    <div class="admin-summary-grid">
+                        <div class="admin-mini-stat">
+                            <span>전체 입차</span>
+                            <strong id="admin-total-entered">0대</strong>
+                        </div>
+                        <div class="admin-mini-stat">
+                            <span>전체 예약</span>
+                            <strong id="admin-total-reserved">0건</strong>
+                        </div>
+                        <div class="admin-mini-stat">
+                            <span>관리 타워</span>
+                            <strong>3개</strong>
+                        </div>
+                    </div>
+
+                    <div class="section-title" style="margin-top: 0;">주차타워 선택</div>
+                    <div id="admin-tower-list"></div>
+
+                    <div class="section-title">전체 매출 통계</div>
+                    <div class="admin-total-sales-box">
+                        <p>A Tower, B Tower, C Tower 매출 합계</p>
+                        <strong id="admin-total-sales">₩ 0</strong>
+                    </div>
+
+                    <div class="section-title">관리자 기능</div>
+                    <button class="btn-outline" onclick="alert('sales_report.csv 파일이 생성되었습니다.')"><i
+                            class="fas fa-file-csv"></i> 매출 통계 CSV 다운로드</button>
+                    <button class="btn-outline" onclick="openModal('modal-log')"><i class="fas fa-terminal"></i> 시스템 로그
+                        확인</button>
+                </div>
+            </div>
+
+            <!-- 관리자 타워별 상세 페이지 -->
+            <div id="page-admin-tower-detail" class="page">
+                <div class="content">
+                    <div class="admin-detail-top">
+                        <h2 id="admin-detail-title">A Tower</h2>
+                        <p id="admin-detail-subtitle">타워별 입차·예약 현황 관리</p>
+                    </div>
+
+                    <div class="admin-total-sales-box">
+                        <p id="admin-detail-sales-label">해당 타워 매출</p>
+                        <strong id="admin-detail-sales">₩ 0</strong>
+                    </div>
+
+                    <div class="admin-section-card">
+                        <div class="admin-section-title-row">
+                            <h3><i class="fas fa-car-side" style="color:var(--primary-color);"></i> 입차 현황</h3>
+                            <span id="admin-entered-count">0대 입차중</span>
+                        </div>
+                        <div class="admin-table-wrapper" style="margin-bottom:0;">
+                            <table class="admin-table" style="min-width: 620px;">
+                                <thead>
+                                    <tr>
+                                        <th>예약번호</th>
+                                        <th>차량번호</th>
+                                        <th>차종</th>
+                                        <th>입차시간</th>
+                                        <th>현재요금</th>
+                                        <th>관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-entered-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="admin-section-card">
+                        <div class="admin-section-title-row">
+                            <h3><i class="far fa-calendar-check" style="color:#f59e0b;"></i> 예약 현황</h3>
+                            <span id="admin-reserved-count">0건 예약중</span>
+                        </div>
+                        <div class="admin-table-wrapper" style="margin-bottom:0;">
+                            <table class="admin-table" style="min-width: 680px;">
+                                <thead>
+                                    <tr>
+                                        <th>예약번호</th>
+                                        <th>차량번호</th>
+                                        <th>전화번호</th>
+                                        <th>차종</th>
+                                        <th>예약시각</th>
+                                        <th>제한시간</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-reserved-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <button class="btn-outline" onclick="goToPage('page-admin')"><i class="fas fa-arrow-left"></i> 관리자 메인으로 돌아가기</button>
+                </div>
+            </div>
+
+            <!-- 플로팅 새로고침 버튼 -->
+            <div class="floating-refresh" onclick="location.reload()" title="새로고침"><i class="fas fa-sync-alt"></i></div>
+        </div>
+
+        <!-- 하단 네비게이션 -->
+        <div class="bottom-nav" id="global-bottom-nav">
+            <div class="nav-item active" id="nav-home" onclick="goToPage('page-home')"><i class="fas fa-home"></i>홈
+            </div>
+            <div class="nav-item" id="nav-search" onclick="goToPage('page-search')"><i class="fas fa-search"></i>조회
+            </div>
+            <div class="nav-item" id="nav-calc" onclick="goToPage('page-calculator')"><i
+                    class="fas fa-calculator"></i>계산기</div>
+            <div class="nav-item" id="nav-info" onclick="goToPage('page-info')"><i class="fas fa-info-circle"></i>안내
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달(팝업) 영역: 관리자 로그 -->
+    <div class="modal-overlay" id="modal-log">
+        <div class="modal-content" style="background:#1e1e1e; color:#00ff00; font-family:monospace; font-size:11px;">
+            <i class="fas fa-times modal-close" style="color:#fff;" onclick="closeModal('modal-log')"></i>
+            <h3 style="margin-bottom: 12px; font-size:14px; color:#fff;">system_log.txt</h3>
+            <div style="height:200px; overflow-y:auto; line-height:1.5;">
+                [2025-01-01 14:00:00] 프로그램 시작<br>
+                [2025-01-01 14:05:22] 예약 생성 - A1234, 12가3456<br>
+                [2025-01-01 14:10:00] 입차 완료 및 삭제 - A1234<br>
+                [2025-01-01 14:30:15] 출차 완료 - 12가3456, 요금 4000원<br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 페이지 라우팅 설정
+        const pageConfig = {
+            'page-home': { title: '무인 주차 시스템', back: null, nav: 'nav-home' },
+            'page-use-menu': { title: '주차장 이용', back: 'page-home', nav: 'nav-home' },
+            'page-entry': { title: '입차 처리', back: 'page-use-menu', nav: 'nav-home' },
+            'page-reserve': { title: '주차 타워 예약', back: 'page-use-menu', nav: 'nav-home' },
+            'page-reservation-complete': { title: '예약 완료', back: null, nav: 'nav-home' },
+            'page-search': { title: '조회 및 변경', back: 'page-home', nav: 'nav-search' },
+            'page-reservation-detail': { title: '예약 상세 정보', back: 'page-search', nav: 'nav-search' },
+            'page-find-res': { title: '예약번호 찾기', back: 'page-search', nav: 'nav-search' },
+            'page-calculator': { title: '예상 요금 계산기', back: 'page-home', nav: 'nav-calc' },
+            'page-admin': { title: '시스템 관리', back: 'page-home', nav: null },
+            'page-admin-tower-detail': { title: '타워별 관리', back: 'page-admin', nav: null },
+            'page-settle-main': { title: '출차 및 정산', back: 'page-home', nav: 'nav-home' },
+            'page-settle-detail': { title: '요금 확인 및 결제', back: 'page-settle-main', nav: 'nav-home' },
+            'page-receipt': { title: '전자 영수증', back: null, nav: 'nav-home' },
+            'page-info': { title: '주차장 이용 안내', back: 'page-home', nav: 'nav-info' }
+        };
+
+        function goToPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) targetPage.classList.add('active');
+
+            document.getElementById('result-find-res').classList.remove('active');
+            document.getElementById('result-calc').classList.remove('active');
+            document.querySelectorAll('.content').forEach(c => c.scrollTop = 0);
+
+            const config = pageConfig[pageId];
+            if (config) {
+                document.getElementById('global-header-title').innerText = config.title;
+                const backBtn = document.getElementById('global-back-btn');
+                if (config.back) {
+                    backBtn.style.display = 'block';
+                    backBtn.onclick = () => goToPage(config.back);
+                } else {
+                    backBtn.style.display = 'none';
+                }
+
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                if (config.nav) document.getElementById(config.nav).classList.add('active');
+            }
+
+            if (pageId === 'page-receipt') {
+                const method = document.getElementById('pay-method').value;
+                document.getElementById('receipt-method').innerText = method;
+            }
+
+            if (pageId === 'page-admin') {
+                renderAdminHome();
+            }
+
+            if (pageId === 'page-admin-tower-detail') {
+                renderAdminTowerDetail();
+            }
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // 조회 실행 로직
+        function handleSearch(event) {
+            event.preventDefault();
+            const inputVal = document.getElementById('search-input').value.trim();
+            const btn = document.getElementById('btn-search-exec');
+
+            if (inputVal === 'admin') {
+                document.getElementById('search-input').value = '';
+                goToPage('page-admin');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 조회 중...';
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '조회하기';
+                goToPage('page-reservation-detail');
+
+                if (inputVal.toUpperCase().startsWith('A')) {
+                    document.getElementById('detail-reserved').style.display = 'none';
+                    document.getElementById('detail-entered').style.display = 'block';
+                } else {
+                    document.getElementById('detail-reserved').style.display = 'block';
+                    document.getElementById('detail-entered').style.display = 'none';
+                }
+            }, 600);
+        }
+
+        // 타워 정보 탭 전환 함수
+        function showTowerInfo(towerName, btnElement) {
+            document.querySelectorAll('.tower-tab').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            document.querySelectorAll('.tower-info-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById('tower-info-' + towerName).classList.add('active');
+        }
+
+
+
+        // 관리자용 타워별 더미 데이터
+        // C코드와 연결할 때는 이 객체를 C에서 받은 예약/입차/매출 데이터로 채우면 됩니다.
+        const adminTowerData = {
+            A: {
+                name: 'A Tower',
+                status: '여유',
+                statusClass: 'good',
+                capacity: 20,
+                sales: 72000,
+                entered: [
+                    { reservationNo: 'FtJZn', carNumber: '12가1111', carType: '경차', entryTime: '2026-05-11 16:58:40', currentFee: 4000 },
+                    { reservationNo: 'A8kLm', carNumber: '45나2222', carType: '전기차', entryTime: '2026-05-11 15:42:10', currentFee: 7300 }
+                ],
+                reserved: [
+                    { reservationNo: 'QwE12', carNumber: '33다3333', phoneNumber: '010-1111-2222', carType: '중형차', reserveTime: '2026-05-11 17:04:20', limitTime: '20분' }
+                ]
+            },
+            B: {
+                name: 'B Tower',
+                status: '보통',
+                statusClass: 'normal',
+                capacity: 50,
+                sales: 51000,
+                entered: [
+                    { reservationNo: 'B5678', carNumber: '34나1111', carType: 'SUV', entryTime: '2026-05-11 14:30:00', currentFee: 10300 }
+                ],
+                reserved: [
+                    { reservationNo: 'Rm92K', carNumber: '78라4444', phoneNumber: '010-3333-4444', carType: '대형차', reserveTime: '2026-05-11 16:51:05', limitTime: '20분' },
+                    { reservationNo: 'Zu7Pa', carNumber: '90마5555', phoneNumber: '010-5555-6666', carType: '중형차', reserveTime: '2026-05-11 17:10:18', limitTime: '20분' }
+                ]
+            },
+            C: {
+                name: 'C Tower',
+                status: '혼잡',
+                statusClass: 'busy',
+                capacity: 70,
+                sales: 22000,
+                entered: [
+                    { reservationNo: 'C9012', carNumber: '56사7777', carType: '중형차', entryTime: '2026-05-11 13:15:30', currentFee: 14500 }
+                ],
+                reserved: []
+            }
+        };
+
+        let currentAdminTower = 'A';
+
+        function formatWon(value) {
+            return '₩ ' + Number(value || 0).toLocaleString('ko-KR');
+        }
+
+        function getAdminTotals() {
+            const towers = Object.values(adminTowerData);
+            return {
+                entered: towers.reduce((sum, tower) => sum + tower.entered.length, 0),
+                reserved: towers.reduce((sum, tower) => sum + tower.reserved.length, 0),
+                sales: towers.reduce((sum, tower) => sum + tower.sales, 0)
+            };
+        }
+
+        function renderAdminHome() {
+            const list = document.getElementById('admin-tower-list');
+            if (!list) return;
+
+            const totals = getAdminTotals();
+            document.getElementById('admin-total-entered').innerText = totals.entered + '대';
+            document.getElementById('admin-total-reserved').innerText = totals.reserved + '건';
+            document.getElementById('admin-total-sales').innerText = formatWon(totals.sales);
+
+            list.innerHTML = Object.keys(adminTowerData).map(key => {
+                const tower = adminTowerData[key];
+                const usedCount = tower.entered.length + tower.reserved.length;
+                return `
+                    <div class="admin-tower-card" onclick="openAdminTower('${key}')">
+                        <div class="admin-tower-head">
+                            <div class="admin-tower-title">
+                                <div class="admin-tower-icon"><i class="fas fa-warehouse"></i></div>
+                                <div>
+                                    <h3>${tower.name}</h3>
+                                    <p>수용 ${tower.capacity}대 · 상세 관리로 이동</p>
+                                </div>
+                            </div>
+                            <span class="admin-status-pill ${tower.statusClass}">${tower.status}</span>
+                        </div>
+                        <div class="admin-card-stats">
+                            <div>
+                                <span>입차</span>
+                                <strong>${tower.entered.length}대</strong>
+                            </div>
+                            <div>
+                                <span>예약</span>
+                                <strong>${tower.reserved.length}건</strong>
+                            </div>
+                            <div>
+                                <span>매출</span>
+                                <strong>${formatWon(tower.sales)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openAdminTower(towerKey) {
+            currentAdminTower = towerKey;
+            goToPage('page-admin-tower-detail');
+        }
+
+        function renderAdminTowerDetail() {
+            const tower = adminTowerData[currentAdminTower];
+            if (!tower) return;
+
+            document.getElementById('admin-detail-title').innerText = tower.name;
+            document.getElementById('admin-detail-subtitle').innerText = `${tower.status} 상태 · 수용 ${tower.capacity}대 · 타워별 입차/예약 관리`;
+            document.getElementById('admin-detail-sales-label').innerText = `${tower.name} 매출`;
+            document.getElementById('admin-detail-sales').innerText = formatWon(tower.sales);
+            document.getElementById('admin-entered-count').innerText = `${tower.entered.length}대 입차중`;
+            document.getElementById('admin-reserved-count').innerText = `${tower.reserved.length}건 예약중`;
+
+            const enteredBody = document.getElementById('admin-entered-list');
+            if (tower.entered.length === 0) {
+                enteredBody.innerHTML = `<tr><td colspan="6" class="admin-empty-row">현재 입차 중인 차량이 없습니다.</td></tr>`;
+            } else {
+                enteredBody.innerHTML = tower.entered.map((item, index) => `
+                    <tr>
+                        <td>${item.reservationNo}</td>
+                        <td>${item.carNumber}</td>
+                        <td>${item.carType}</td>
+                        <td>${item.entryTime}</td>
+                        <td>${formatWon(item.currentFee)}</td>
+                        <td><button class="admin-action-btn" onclick="editEntryTime('${currentAdminTower}', ${index})">입차시간 수정</button></td>
+                    </tr>
+                `).join('');
+            }
+
+            const reservedBody = document.getElementById('admin-reserved-list');
+            if (tower.reserved.length === 0) {
+                reservedBody.innerHTML = `<tr><td colspan="6" class="admin-empty-row">현재 예약 대기 차량이 없습니다.</td></tr>`;
+            } else {
+                reservedBody.innerHTML = tower.reserved.map(item => `
+                    <tr>
+                        <td>${item.reservationNo}</td>
+                        <td>${item.carNumber}</td>
+                        <td>${item.phoneNumber}</td>
+                        <td>${item.carType}</td>
+                        <td>${item.reserveTime}</td>
+                        <td>${item.limitTime}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function editEntryTime(towerKey, index) {
+            const tower = adminTowerData[towerKey];
+            if (!tower || !tower.entered[index]) return;
+
+            const item = tower.entered[index];
+            const nextTime = prompt('수정할 입차시간을 입력하세요.\n예: 2026-05-11 16:58:40', item.entryTime);
+
+            if (nextTime === null) return;
+            if (!nextTime.trim()) {
+                alert('입차시간을 입력해주세요.');
+                return;
+            }
+
+            item.entryTime = nextTime.trim();
+            renderAdminTowerDetail();
+            alert('입차시간이 수정되었습니다.');
+        }
+
+
+        // ★ 커스텀 셀렉트(시간/분) 생성 로직
+        function setupCustomSelects() {
+            function createOptionsHTML(max, suffix) {
+                let html = '';
+                for (let i = 0; i <= max; i++) {
+                    let val = String(i).padStart(2, '0');
+                    html += `<div class="custom-option" data-val="${val}">${val}${suffix}</div>`;
+                }
+                return html;
+            }
+
+            // HTML 생성 및 주입
+            document.getElementById('entry-hour-opts').innerHTML = createOptionsHTML(23, '시');
+            document.getElementById('exit-hour-opts').innerHTML = createOptionsHTML(23, '시');
+            document.getElementById('entry-min-opts').innerHTML = createOptionsHTML(59, '분');
+            document.getElementById('exit-min-opts').innerHTML = createOptionsHTML(59, '분');
+
+            // 이벤트 바인딩
+            document.querySelectorAll('.custom-select-wrapper').forEach(wrapper => {
+                const trigger = wrapper.querySelector('.custom-select-trigger');
+                const optionsLayer = wrapper.querySelector('.custom-select-options');
+                const hiddenInput = wrapper.querySelector('input[type="hidden"]');
+
+                // 토글 열기
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // 다른 열린 셀렉트 닫기
+                    document.querySelectorAll('.custom-select-options').forEach(opt => {
+                        if (opt !== optionsLayer) opt.classList.remove('open');
+                    });
+                    optionsLayer.classList.toggle('open');
+                });
+
+                // 옵션 클릭
+                optionsLayer.querySelectorAll('.custom-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const val = option.getAttribute('data-val');
+                        const text = option.innerText;
+
+                        trigger.querySelector('span').innerText = text;
+                        trigger.classList.add('selected');
+                        hiddenInput.value = val;
+
+                        optionsLayer.classList.remove('open');
+                    });
+                });
+            });
+
+            // 화면 외부 클릭 시 드롭다운 닫기
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.custom-select-options').forEach(opt => {
+                    opt.classList.remove('open');
+                });
+            });
+        }
+
+        // 폼 제출 방지 및 Alert 로직
+        function handleCancelReservation() {
+            if (confirm("정말 예약을 취소하시겠습니까?\n결제된 보증금 2,000원은 환불되지 않습니다.")) {
+                alert("예약이 안전하게 취소되었습니다.");
+                document.getElementById('search-input').value = '';
+                goToPage('page-home');
+            }
+        }
+
+        function handleFindRes(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btn-find-exec');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 찾는 중...';
+            document.getElementById('result-find-res').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('result-find-res').classList.add('active');
+                btn.disabled = false;
+                btn.innerHTML = '예약번호 찾기';
+            }, 600);
+        }
+
+        function handleCalculate(event) {
+            event.preventDefault();
+            // 커스텀 셀렉트 유효성 검사
+            const hiddenInputs = ['entry-hour-val', 'entry-min-val', 'exit-hour-val', 'exit-min-val'];
+            for (let id of hiddenInputs) {
+                if (!document.getElementById(id).value) {
+                    alert('시간과 분을 모두 선택해주세요.');
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('btn-calc-exec');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 계산 중...';
+            document.getElementById('result-calc').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('result-calc').classList.add('active');
+                btn.disabled = false;
+                btn.innerHTML = '예상 요금 확인';
+            }, 500);
+        }
+
+        function submitEntry(event) {
+            event.preventDefault();
+            alert('입차가 정상적으로 처리되었습니다. 안전 주차 하세요.');
+            goToPage('page-home');
+        }
+
+        function generateReservationNo() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < 5; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function formatDateTime(date) {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            const hh = String(date.getHours()).padStart(2, '0');
+            const mi = String(date.getMinutes()).padStart(2, '0');
+            const ss = String(date.getSeconds()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function openReservationCompleteWindow(data) {
+            const popup = window.open('', 'reservationComplete', 'width=430,height=760,resizable=yes,scrollbars=yes');
+
+            if (!popup) {
+                alert('팝업이 차단되었습니다. 브라우저 팝업 차단을 해제해주세요.');
+                return;
+            }
+
+            popup.document.write(`
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예약 완료</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --bg-color: #e5e7eb;
+            --screen-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --border-color: #e5e7eb;
+            --card-bg: #f9fafb;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        body {
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px 12px;
+        }
+
+        .complete-container {
+            width: 100%;
+            max-width: 430px;
+            background: var(--screen-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+
+        .complete-header {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 34px 24px 30px;
+            text-align: center;
+        }
+
+        .check-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: white;
+            color: var(--success-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 18px;
+            font-size: 42px;
+            font-weight: 700;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+        }
+
+        .complete-header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .complete-header p {
+            font-size: 14px;
+            opacity: 0.92;
+            line-height: 1.6;
+        }
+
+        .reservation-code-box {
+            margin: 22px 20px 16px;
+            padding: 20px;
+            border-radius: 16px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            text-align: center;
+        }
+
+        .reservation-code-box span {
+            display: block;
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        .reservation-code-box strong {
+            font-size: 34px;
+            color: var(--primary-color);
+            letter-spacing: 2px;
+        }
+
+        .info-card {
+            margin: 0 20px 20px;
+            padding: 18px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+        }
+
+        .info-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: var(--text-sub);
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-row strong {
+            color: var(--text-main);
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .notice {
+            margin: 0 20px 20px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #fef2f2;
+            color: #991b1b;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .btn-close {
+            width: calc(100% - 40px);
+            margin: 0 20px 24px;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-close:active {
+            opacity: 0.85;
+        }
+
+
+        /* 관리자 대시보드 개선 스타일 */
+        .admin-hero {
+            background: linear-gradient(135deg, #111827, #374151);
+            color: #fff;
+            border-radius: 18px;
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: 0 10px 24px rgba(17, 24, 39, 0.18);
+        }
+
+        .admin-hero h2 {
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        .admin-hero p {
+            font-size: 12px;
+            opacity: 0.82;
+            line-height: 1.5;
+        }
+
+        .admin-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .admin-mini-stat {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+
+        .admin-mini-stat span {
+            display: block;
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        .admin-mini-stat strong {
+            font-size: 17px;
+            color: var(--text-main);
+        }
+
+        .admin-tower-card {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .admin-tower-card:active {
+            transform: scale(0.985);
+            background: var(--card-bg);
+        }
+
+        .admin-tower-card:hover {
+            border-color: #bfdbfe;
+            box-shadow: 0 8px 18px rgba(59, 130, 246, 0.08);
+        }
+
+        .admin-tower-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .admin-tower-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .admin-tower-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .admin-tower-title h3 {
+            font-size: 16px;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .admin-tower-title p {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .admin-status-pill {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            color: #374151;
+            white-space: nowrap;
+        }
+
+        .admin-status-pill.good {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .admin-status-pill.normal {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .admin-status-pill.busy {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .admin-card-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .admin-card-stats div {
+            text-align: center;
+        }
+
+        .admin-card-stats span {
+            display: block;
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+        }
+
+        .admin-card-stats strong {
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .admin-total-sales-box {
+            background: linear-gradient(135deg, #ecfdf5, #ffffff);
+            border: 1px solid #a7f3d0;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+
+        .admin-total-sales-box p {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+        }
+
+        .admin-total-sales-box strong {
+            display: block;
+            font-size: 26px;
+            color: var(--success-color);
+        }
+
+        .admin-detail-top {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .admin-detail-top h2 {
+            font-size: 22px;
+            margin-bottom: 6px;
+        }
+
+        .admin-detail-top p {
+            font-size: 12px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .admin-section-card {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+
+        .admin-section-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .admin-section-title-row h3 {
+            font-size: 15px;
+            color: var(--text-main);
+        }
+
+        .admin-section-title-row span {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .admin-action-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 7px 9px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            background: var(--primary-color);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .admin-action-btn:active {
+            opacity: 0.8;
+        }
+
+        .admin-action-btn.disabled {
+            background: var(--disabled-color);
+            cursor: default;
+        }
+
+        .admin-empty-row {
+            text-align: center;
+            color: var(--text-sub);
+            padding: 18px !important;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="complete-container">
+        <div class="complete-header">
+            <div class="check-circle">✓</div>
+            <h1>예약이 완료되었습니다</h1>
+            <p>
+                고객님의 예약번호는 <strong>${escapeHtml(data.reservationNo)}</strong>이며<br>
+                입력하신 전화번호의 카카오톡/SMS로 발송되었습니다.
+            </p>
+        </div>
+
+        <div class="reservation-code-box">
+            <span>예약번호</span>
+            <strong>${escapeHtml(data.reservationNo)}</strong>
+        </div>
+
+        <div class="info-card">
+            <div class="info-title">예약 상세 정보</div>
+            <div class="info-row"><span>예약번호</span><strong>${escapeHtml(data.reservationNo)}</strong></div>
+            <div class="info-row"><span>차량번호</span><strong>${escapeHtml(data.carNumber)}</strong></div>
+            <div class="info-row"><span>전화번호</span><strong>${escapeHtml(data.phoneNumber)}</strong></div>
+            <div class="info-row"><span>차종</span><strong>${escapeHtml(data.carType)}</strong></div>
+            <div class="info-row"><span>주차타워</span><strong>${escapeHtml(data.parkingTower)}</strong></div>
+            <div class="info-row"><span>운영시간</span><strong>${escapeHtml(data.operatingHours)}</strong></div>
+            <div class="info-row"><span>예약시각</span><strong>${escapeHtml(data.reserveTime)}</strong></div>
+            <div class="info-row"><span>예약 제한시간</span><strong>${escapeHtml(data.limitTime)}</strong></div>
+            <div class="info-row"><span>예약보증금</span><strong style="color: var(--primary-color);">${escapeHtml(data.deposit)}</strong></div>
+        </div>
+
+        <div class="notice">
+            예약 후 ${escapeHtml(data.limitTime)} 이내에 입차하지 않으면 자동 취소됩니다.<br>
+            시간 초과 취소 시 예약 보증금은 환불되지 않습니다.
+        </div>
+
+        <button class="btn-close" onclick="window.close()">확인</button>
+    </div>
+</body>
+</html>
+            `);
+
+            popup.document.close();
+        }
+
+        function setCompleteText(id, value) {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        }
+
+        function renderReservationComplete(data) {
+            setCompleteText('complete-code-inline', data.reservationNo);
+            setCompleteText('complete-code-big', data.reservationNo);
+            setCompleteText('complete-reservation-no', data.reservationNo);
+            setCompleteText('complete-car-number', data.carNumber);
+            setCompleteText('complete-phone-number', data.phoneNumber);
+            setCompleteText('complete-car-type', data.carType);
+            setCompleteText('complete-parking-tower', data.parkingTower);
+            setCompleteText('complete-operating-hours', data.operatingHours);
+            setCompleteText('complete-reserve-time', data.reserveTime);
+            setCompleteText('complete-limit-time', data.limitTime);
+            setCompleteText('complete-deposit', data.deposit);
+        }
+
+        function submitReserve(event) {
+            event.preventDefault();
+
+            const carNumber = document.getElementById('reserve-car-number').value.trim();
+            const phoneNumber = document.getElementById('reserve-phone').value.trim();
+            const carType = document.getElementById('reserve-car-type').value;
+            const towerSelect = document.getElementById('reserve-tower');
+            const selectedTowerOption = towerSelect.options[towerSelect.selectedIndex];
+
+            const reservationData = {
+                // 나중에 C 코드에서 예약번호를 받아오면 이 값을 C에서 받은 값으로 교체하면 됨
+                reservationNo: generateReservationNo(),
+                carNumber: carNumber,
+                phoneNumber: phoneNumber,
+                carType: carType,
+                parkingTower: towerSelect.value,
+                operatingHours: selectedTowerOption.dataset.operating || '24시간 운영',
+                // 나중에 C 코드에서 예약시각을 받아오면 이 값을 C에서 받은 값으로 교체하면 됨
+                reserveTime: formatDateTime(new Date()),
+                limitTime: '20분',
+                deposit: '2000원'
+            };
+
+            renderReservationComplete(reservationData);
+            goToPage('page-reservation-complete');
+        }
+
+        function searchParkingFee(event) {
+            event.preventDefault();
+            goToPage('page-settle-detail');
+        }
+
+        window.onload = () => {
+            setupCustomSelects(); // 커스텀 셀렉트 렌더링 호출
+            goToPage('page-home');
+        };
+    </script>
+</body>
+
+</html>
