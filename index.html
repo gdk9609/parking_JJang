@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주차장 앱 - 조회 및 관리자 기능 추가</title>
+    <title>예약 기반 무인 주차관리 시스템</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -18,7 +18,8 @@
             --card-bg: #f9fafb;
             --disabled-color: #9ca3af;
             --admin-color: #1f2937;
-            /* 관리자 페이지용 색상 */
+            --danger-color: #ef4444;
+            --success-color: #10b981;
         }
 
         * {
@@ -33,8 +34,8 @@
             background-color: var(--bg-color);
             display: flex;
             justify-content: center;
-            margin: 0;
             height: 100vh;
+            margin: 0;
         }
 
         .app-container {
@@ -43,10 +44,10 @@
             height: 100vh;
             background-color: var(--screen-bg);
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            position: relative;
             display: flex;
             flex-direction: column;
+            position: relative;
+            overflow: hidden;
         }
 
         .header {
@@ -54,12 +55,10 @@
             align-items: center;
             justify-content: center;
             padding: 16px 20px;
-            position: relative;
-            font-size: 16px;
             font-weight: 700;
-            flex-shrink: 0;
             border-bottom: 1px solid var(--border-color);
             background-color: #fff;
+            flex-shrink: 0;
         }
 
         .header .back-btn {
@@ -107,9 +106,8 @@
             flex: 1;
             overflow-y: auto;
             padding: 20px;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
             padding-bottom: 80px;
+            scrollbar-width: none;
         }
 
         .content::-webkit-scrollbar {
@@ -123,6 +121,7 @@
             background-color: #fff;
             border-top: 1px solid var(--border-color);
             flex-shrink: 0;
+            z-index: 10;
         }
 
         .nav-item {
@@ -144,10 +143,9 @@
             margin-bottom: 4px;
         }
 
-        /* 플로팅 새로고침 버튼 */
         .floating-refresh {
             position: absolute;
-            bottom: 80px;
+            bottom: 90px;
             right: 20px;
             width: 48px;
             height: 48px;
@@ -182,8 +180,8 @@
             display: flex;
             align-items: center;
             cursor: pointer;
-            transition: background-color 0.2s;
             background-color: #fff;
+            transition: background-color 0.2s;
         }
 
         .card:active {
@@ -218,17 +216,17 @@
             width: 100%;
             background-color: var(--primary-color);
             color: #fff;
-            padding: 16px;
+            padding: 14px;
             border-radius: 8px;
             border: none;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 8px;
-            transition: background 0.2s;
+            transition: opacity 0.2s;
         }
 
         .btn-primary:active {
@@ -244,13 +242,20 @@
             width: 100%;
             background-color: #fff;
             color: var(--text-main);
-            padding: 16px;
+            padding: 12px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
         }
 
         .blue-card {
@@ -271,14 +276,6 @@
             margin-bottom: 20px;
         }
 
-        .price-text {
-            font-size: 24px;
-            color: var(--primary-color);
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
         .info-row {
             display: flex;
             justify-content: space-between;
@@ -295,20 +292,7 @@
         hr {
             border: 0;
             border-top: 1px solid var(--border-color);
-            margin: 20px 0;
-        }
-
-        .success-circle {
-            width: 80px;
-            height: 80px;
-            background-color: var(--primary-color);
-            color: #fff;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 36px;
-            margin: 30px auto 20px;
+            margin: 16px 0;
         }
 
         .input-group {
@@ -323,18 +307,19 @@
         }
 
         .input-group label .req {
-            color: #ef4444;
+            color: var(--danger-color);
             margin-left: 2px;
         }
 
         .input-field {
             width: 100%;
-            padding: 14px 16px;
+            padding: 12px 16px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             font-size: 14px;
             outline: none;
             transition: border-color 0.2s;
+            background-color: #fff;
         }
 
         .input-field:focus {
@@ -344,11 +329,19 @@
         select.input-field {
             appearance: none;
             background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%236b7280" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>') no-repeat right 16px center;
-            background-color: #fff;
             background-size: 12px;
         }
 
-        /* 조회결과 박스 */
+        .notice-text {
+            font-size: 12px;
+            color: var(--danger-color);
+            margin-bottom: 16px;
+            line-height: 1.4;
+            background: #fef2f2;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
         .result-box {
             display: none;
             margin-top: 24px;
@@ -356,11 +349,215 @@
             border-radius: 12px;
             border: 1px solid var(--primary-color);
             background-color: #eff6ff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .result-box.active {
             display: block;
             animation: fadeSlideIn 0.3s ease;
+        }
+
+        .timer-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--danger-color);
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.2s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: #fff;
+            width: 85%;
+            max-height: 80%;
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-sub);
+        }
+
+        .admin-table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .admin-table {
+            width: 100%;
+            min-width: 400px;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .admin-table th {
+            background-color: var(--card-bg);
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .admin-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 주차 타워 탭 스타일 */
+        .tower-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tower-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-sub);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tower-tab.active {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+
+        .tower-info-content {
+            display: none;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .tower-info-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tower-mini-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 8px;
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .fee-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        /* 커스텀 셀렉트(스크롤 길이 제한용) 스타일 */
+        .custom-select-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .custom-select-trigger {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #fff;
+            color: var(--text-sub);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .custom-select-trigger.selected {
+            color: var(--text-main);
+        }
+
+        .custom-select-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 160px;
+            /* ★ 핵심: 드롭다운 스크롤 길이 제한 */
+            overflow-y: auto;
+            z-index: 999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .custom-select-options.open {
+            display: block;
+        }
+
+        .custom-option {
+            padding: 10px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-main);
+            transition: background 0.2s;
+        }
+
+        .custom-option:hover {
+            background: #eff6ff;
+            color: var(--primary-color);
         }
     </style>
 </head>
@@ -380,31 +577,31 @@
             <div id="page-home" class="page active">
                 <div class="content">
                     <div class="blue-card" style="padding: 30px 20px; margin-top: 10px;">
-                        <h2 style="font-size: 24px; margin-bottom:10px;">빠르고 간편한<br>스마트 주차</h2>
-                        <p style="opacity: 0.9; font-size: 14px;">예약부터 정산까지 한 번에 해결하세요.</p>
+                        <h2 style="font-size: 24px; margin-bottom:10px;">스마트 예약 주차</h2>
+                        <p style="opacity: 0.9; font-size: 14px;">방문 전 예약 필수! 빠르게 이용하세요.</p>
                     </div>
                     <div class="section-title">메인 메뉴</div>
                     <div class="card" onclick="goToPage('page-use-menu')">
                         <div class="card-icon"><i class="fas fa-car-side"></i></div>
                         <div class="card-text" style="flex:1;">
                             <h4>주차장 이용</h4>
-                            <p>입차 및 주차 예약하기</p>
+                            <p>입차 및 사전 예약하기</p>
                         </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
                     </div>
                     <div class="card" onclick="goToPage('page-search')">
                         <div class="card-icon" style="color: #f59e0b; background-color: #fef3c7;"><i
                                 class="fas fa-search"></i></div>
                         <div class="card-text" style="flex:1;">
-                            <h4>조회하기</h4>
-                            <p>내 주차 상태 및 예약 확인</p>
+                            <h4>조회 및 변경</h4>
+                            <p>주차/예약 상태 확인 및 제한시간 조회</p>
                         </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
                     </div>
                     <div class="card" onclick="goToPage('page-settle-main')">
                         <div class="card-icon" style="color: #8b5cf6; background-color: #f5f3ff;"><i
-                                class="fas fa-won-sign"></i></div>
+                                class="fas fa-credit-card"></i></div>
                         <div class="card-text" style="flex:1;">
-                            <h4>정산하기</h4>
-                            <p>주차 요금 확인 및 결제</p>
+                            <h4>출차 및 정산</h4>
+                            <p>주차 요금 정산 및 출차 결제</p>
                         </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
                     </div>
                     <div class="card" onclick="goToPage('page-info')">
@@ -412,206 +609,580 @@
                                 class="fas fa-info-circle"></i></div>
                         <div class="card-text" style="flex:1;">
                             <h4>정보 확인</h4>
-                            <p>주차타워 시설 안내</p>
+                            <p>요금표 및 실시간 타워 현황 조회</p>
                         </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- 1-1. 주차장 이용 메뉴, 입차, 예약 (기존 동일 생략 방지) -->
+            <!-- 1-1. 주차장 이용 메뉴 -->
             <div id="page-use-menu" class="page">
                 <div class="content">
                     <p style="margin: 10px 0 20px; font-weight: 500; font-size: 14px;">원하시는 서비스를 선택해주세요.</p>
-                    <div class="card" onclick="goToPage('page-entry')">
-                        <div class="card-icon" style="background: transparent;"><i class="fas fa-sign-in-alt"
-                                style="font-size: 24px;"></i></div>
-                        <div class="card-text" style="flex:1;">
-                            <h4>입차하기</h4>
-                            <p>주차장에 도착하셨다면 입차를 진행하세요.</p>
-                        </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
-                    </div>
                     <div class="card" onclick="goToPage('page-reserve')">
                         <div class="card-icon" style="background: transparent;"><i class="far fa-calendar-check"
-                                style="font-size: 24px;"></i></div>
+                                style="font-size: 24px; color: var(--primary-color);"></i></div>
                         <div class="card-text" style="flex:1;">
-                            <h4>예약하기</h4>
-                            <p>방문 전 주차 공간을 미리 예약하세요.</p>
+                            <h4>예약하기 (필수)</h4>
+                            <p>주차 타워를 미리 예약하세요.</p>
+                        </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                    </div>
+                    <div class="card" onclick="goToPage('page-entry')">
+                        <div class="card-icon" style="background: transparent;"><i class="fas fa-sign-in-alt"
+                                style="font-size: 24px; color: var(--text-main);"></i></div>
+                        <div class="card-text" style="flex:1;">
+                            <h4>입차하기</h4>
+                            <p>발급받은 예약번호로 입차합니다.</p>
                         </div><i class="fas fa-chevron-right" style="color:#ccc;"></i>
                     </div>
                 </div>
             </div>
 
-            <div id="page-entry" class="page">
-                <div class="content">
-                    <form id="form-entry" onsubmit="submitEntry(event)" style="margin-top: 10px;">
-                        <div class="input-group"><label for="entry-res-id">예약번호</label><input type="text"
-                                id="entry-res-id" class="input-field" maxlength="20" placeholder="예: RES-123456 (예약자만)">
-                        </div>
-                        <div class="input-group"><label for="entry-car-num">차량번호<span class="req">*</span></label><input
-                                type="text" id="entry-car-num" class="input-field" maxlength="15"
-                                placeholder="예: 12가 3456" required></div>
-                        <button type="submit" id="btn-entry" class="btn-primary" style="margin-top: 24px;">입차
-                            처리하기</button>
-                    </form>
-                </div>
-            </div>
-
+            <!-- 예약 폼 -->
             <div id="page-reserve" class="page">
                 <div class="content">
-                    <form id="form-reserve" onsubmit="submitReserve(event)" style="margin-top: 10px;">
-                        <div class="input-group"><label for="res-car-num">차량번호<span class="req">*</span></label><input
-                                type="text" id="res-car-num" class="input-field" maxlength="15"
-                                placeholder="예: 12가 3456" required></div>
-                        <div class="input-group"><label>주차타워 선택</label><select class="input-field">
-                                <option>주차타워 A (여유)</option>
-                                <option>주차타워 B (보통)</option>
-                            </select></div>
-                        <button type="submit" id="btn-reserve" class="btn-primary" style="margin-top: 20px;">예약
-                            완료</button>
+                    <div class="notice-text">
+                        <i class="fas fa-exclamation-circle"></i> <strong>예약 안내</strong><br>
+                        - 예약 후 <strong>20분 이내</strong>에 입차하지 않으면 자동 취소됩니다.<br>
+                        - 예약 보증금 <strong>2,000원</strong>이 발생하며, 정상 정산 시 차감되나 시간 초과 취소 시 환불되지 않습니다.
+                    </div>
+                    <form onsubmit="submitReserve(event)">
+                        <div class="input-group">
+                            <label>차량번호<span class="req">*</span></label>
+                            <input type="text" class="input-field" placeholder="예: 12가3456" required>
+                        </div>
+                        <div class="input-group">
+                            <label>전화번호<span class="req">*</span></label>
+                            <input type="tel" class="input-field" placeholder="010-0000-0000" required>
+                        </div>
+                        <div class="input-group">
+                            <label>차종 선택<span class="req">*</span></label>
+                            <select class="input-field" required>
+                                <option value="" disabled selected>차종을 선택하세요</option>
+                                <option>경차</option>
+                                <option>중형차</option>
+                                <option>SUV</option>
+                                <option>대형차</option>
+                                <option>전기차</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>주차타워 (추천 타워 우선)</label>
+                            <select class="input-field" required>
+                                <option>A Tower (여유)</option>
+                                <option>B Tower (보통)</option>
+                                <option>C Tower (혼잡)</option>
+                            </select>
+                        </div>
+                        <hr>
+                        <div class="input-group">
+                            <label>보증금 결제 수단 (2,000원)<span class="req">*</span></label>
+                            <select class="input-field" required>
+                                <option value="" disabled selected>결제 수단을 선택하세요</option>
+                                <option>신용/체크카드</option>
+                                <option>모바일 간편결제 (카카오/네이버페이)</option>
+                                <option>휴대폰 소액결제</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 10px;">결제 및 예약 완료</button>
                     </form>
                 </div>
             </div>
 
-            <!-- ★ 추가됨: 4. 조회하기 화면 -->
+            <!-- 입차 폼 -->
+            <div id="page-entry" class="page">
+                <div class="content">
+                    <div class="notice-text" style="background:#eff6ff; color:var(--text-main);">
+                        입차는 예약 완료 후 문자로 발송된 <strong>예약번호</strong>가 있어야만 가능합니다.
+                    </div>
+                    <form onsubmit="submitEntry(event)">
+                        <div class="input-group">
+                            <label>예약번호<span class="req">*</span></label>
+                            <input type="text" class="input-field" placeholder="예: A1234" required>
+                        </div>
+                        <div class="input-group">
+                            <label>차량번호<span class="req">*</span></label>
+                            <input type="text" class="input-field" placeholder="예: 12가3456" required>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 24px;">입차 처리</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 4. 조회하기 화면 (예약번호 입력) -->
             <div id="page-search" class="page">
                 <div class="content">
-                    <p style="font-size: 14px; font-weight: 500; margin-top: 10px; margin-bottom: 20px;">내 주차 상태나 예약 내역을
-                        확인하세요.</p>
+                    <p style="font-size: 14px; margin-bottom: 20px;">예약번호를 입력하여 상태를 조회하세요.</p>
                     <form onsubmit="handleSearch(event)">
                         <div class="input-group">
-                            <label for="search-input">차량번호 또는 예약번호<span class="req">*</span></label>
-                            <input type="text" id="search-input" class="input-field" placeholder="예: 12가 3456" required
-                                autocomplete="off">
+                            <label>예약번호<span class="req">*</span></label>
+                            <input type="text" id="search-input" class="input-field" placeholder="(관리자 접속: admin)"
+                                required autocomplete="off">
                         </div>
                         <button type="submit" id="btn-search-exec" class="btn-primary">조회하기</button>
                         <div style="text-align: center; margin-top: 16px;">
-                            <a href="#"
-                                style="font-size: 13px; color: var(--text-sub); text-decoration: underline;">예약번호를
+                            <a href="#" onclick="goToPage('page-find-res')"
+                                style="font-size: 13px; color: var(--primary-color); text-decoration: underline;">예약번호를
                                 잊으셨나요?</a>
                         </div>
                     </form>
+                </div>
+            </div>
 
-                    <!-- 조회 결과 영역 -->
-                    <div id="search-result-area" class="result-box">
+            <!-- 새로 분리된 예약/입차 상세 정보 페이지 -->
+            <div id="page-reservation-detail" class="page">
+                <div class="content">
+                    <!-- 조회 결과: 예약 중 상태 -->
+                    <div id="detail-reserved" style="display: none;">
+                        <div class="result-box active"
+                            style="border-color: #f59e0b; background-color: #fef3c7; margin-top: 0;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f59e0b; padding-bottom: 10px; margin-bottom: 12px;">
+                                <h3 style="font-size: 16px; color: #b45309;">예약 완료</h3>
+                                <span
+                                    style="font-size: 12px; background: #f59e0b; color: #fff; padding: 4px 8px; border-radius: 4px;">입차
+                                    대기중</span>
+                            </div>
+                            <div class="timer-text">입차 제한시간: 18분 42초</div>
+                            <p style="text-align: center; font-size:12px; color:#b45309; margin-bottom:16px;">시간 내 미입차 시
+                                자동 취소됩니다.</p>
+                            <div class="info-row"><span>차량번호</span><strong style="color:#78350f;">12가3456</strong></div>
+                            <div class="info-row"><span>배정 타워</span><strong style="color:#78350f;">A Tower</strong>
+                            </div>
+                            <div class="info-row"><span>예약 차종</span><strong style="color:#78350f;">SUV</strong></div>
+                            <div style="display:flex; gap:8px; margin-top:20px;">
+                                <button class="btn-primary" style="flex:1; background-color: var(--danger-color);"
+                                    onclick="handleCancelReservation()">예약 취소</button>
+                                <button class="btn-outline" style="flex:1; margin-top:0;"
+                                    onclick="alert('타워 변경 메뉴로 이동합니다.')">타워 변경</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 조회 결과: 입차 완료 상태 -->
+                    <div id="detail-entered" style="display: none;">
+                        <div class="result-box active"
+                            style="border-color: var(--success-color); background-color: #ecfdf5; margin-top: 0;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--success-color); padding-bottom: 10px; margin-bottom: 12px;">
+                                <h3 style="font-size: 16px; color: var(--success-color);">입차 완료</h3>
+                                <span
+                                    style="font-size: 12px; background: var(--success-color); color: white; padding: 4px 8px; border-radius: 4px;">주차
+                                    중</span>
+                            </div>
+                            <div class="info-row"><span>예약번호</span><strong>A1234</strong></div>
+                            <div class="info-row"><span>차량번호</span><strong>12가3456</strong></div>
+                            <div class="info-row"><span>현재 위치</span><strong>A Tower</strong></div>
+                            <div class="info-row"><span>입차 시간</span><strong>14:30:00</strong></div>
+                            <div class="info-row"><span>경과 시간</span><strong>1시간 20분</strong></div>
+                            <hr style="border-color: #a7f3d0;">
+                            <div class="info-row" style="margin-bottom:0;"><span>현재 예상 요금</span><strong
+                                    style="color:var(--success-color); font-size:16px;">4,000원</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 예약번호 찾기 페이지 -->
+            <div id="page-find-res" class="page">
+                <div class="content">
+                    <p style="font-size: 14px; margin-bottom: 20px;">본인 확인을 위해 차량번호와 전화번호를 입력해주세요.</p>
+                    <form onsubmit="handleFindRes(event)">
+                        <div class="input-group">
+                            <label>차량번호<span class="req">*</span></label>
+                            <input type="text" id="find-car" class="input-field" placeholder="예: 12가3456" required>
+                        </div>
+                        <div class="input-group">
+                            <label>전화번호<span class="req">*</span></label>
+                            <input type="tel" id="find-phone" class="input-field" placeholder="010-0000-0000" required>
+                        </div>
+                        <button type="submit" id="btn-find-exec" class="btn-primary">예약번호 찾기</button>
+                    </form>
+
+                    <!-- 찾기 결과 영역 -->
+                    <div id="result-find-res" class="result-box">
                         <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; margin-bottom: 12px;">
                             <h3 style="font-size: 16px; color: var(--primary-color);">조회 완료</h3>
                             <span
-                                style="font-size: 12px; background: var(--primary-color); color: white; padding: 4px 8px; border-radius: 4px;">입차
-                                중</span>
+                                style="font-size: 12px; background: var(--primary-color); color: white; padding: 4px 8px; border-radius: 4px;">예약
+                                상태</span>
                         </div>
-                        <div class="info-row"><span>차량번호</span><strong id="res-car">12가 3456</strong></div>
-                        <div class="info-row"><span>현재 위치</span><strong>주차타워 A (1층)</strong></div>
-                        <div class="info-row"><span>입차 시간</span><strong>14:30</strong></div>
-                        <div class="info-row" style="margin-bottom: 0;"><span>이용 시간</span><strong>1시간 20분</strong></div>
+                        <p style="font-size: 13px; margin-bottom: 16px; line-height: 1.5;">
+                            고객님의 예약번호는 <strong style="color:var(--primary-color); font-size:16px;">A1234</strong>
+                            입니다.<br>
+                            아직 입차 전이므로 제한시간 내에 입차해주세요.
+                        </p>
+                        <div class="info-row"><span>차량번호</span><strong>12가3456</strong></div>
+                        <div class="info-row"><span>배정 타워</span><strong>A Tower</strong></div>
                     </div>
                 </div>
             </div>
 
-            <!-- ★ 추가됨: 4-1. 관리자 전용 대시보드 (이스터에그) -->
-            <div id="page-admin" class="page">
+            <!-- ★ 계산기 페이지 (스크롤 길이 제한된 커스텀 드롭다운 적용) -->
+            <div id="page-calculator" class="page">
                 <div class="content">
-                    <div class="admin-card">
-                        <i class="fas fa-user-shield" style="font-size: 32px; margin-bottom: 12px;"></i>
-                        <h2 style="font-size: 20px; margin-bottom: 4px;">관리자 대시보드</h2>
-                        <p style="font-size: 13px; opacity: 0.8;">실시간 시스템 현황 모니터링</p>
-                    </div>
-
-                    <div class="section-title">주차타워 수용 현황</div>
                     <div
-                        style="background: var(--card-bg); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
-                        <div class="info-row"><span>타워 A (운영중)</span><strong style="color: var(--primary-color);">42 /
-                                50 대</strong></div>
-                        <div class="info-row"><span>타워 B (만차)</span><strong style="color: #ef4444;">50 / 50 대</strong>
-                        </div>
-                        <div class="info-row" style="margin-bottom: 0;"><span>타워 C (점검중)</span><strong>0 / 50 대</strong>
-                        </div>
+                        style="background: var(--primary-color); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="font-size:16px; margin-bottom:8px;"><i class="fas fa-calculator"></i> 예상 주차요금 계산기
+                        </h3>
+                        <p style="font-size:12px; opacity:0.9;">기본 1시간 2,000원 / 추가 10분당 300원</p>
                     </div>
 
-                    <div class="section-title">금일 정산 통계</div>
-                    <div
-                        style="background: var(--card-bg); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
-                        <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 8px;">총 매출액</p>
-                        <div style="font-size: 24px; font-weight: 700; color: #10b981;">₩ 1,245,000</div>
-                    </div>
+                    <form onsubmit="handleCalculate(event)">
+                        <!-- 예상 입차 일시 -->
+                        <div class="input-group">
+                            <label>예상 입차 일시<span class="req">*</span></label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="date" class="input-field" style="flex: 2;" required>
 
-                    <div class="section-title" style="margin-top: 30px;">데이터 관리</div>
-                    <button class="btn-outline"><i class="fas fa-database"></i> 데이터 수정 및 강제 출차</button>
-                    <button class="btn-outline"><i class="fas fa-list-alt"></i> 시스템 로그 확인</button>
+                                <!-- 커스텀 시 선택 -->
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger" id="entry-hour-trigger">
+                                        <span>시</span><i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="custom-select-options" id="entry-hour-opts"></div>
+                                    <input type="hidden" id="entry-hour-val" required>
+                                </div>
+
+                                <!-- 커스텀 분 선택 -->
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger" id="entry-min-trigger">
+                                        <span>분</span><i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="custom-select-options" id="entry-min-opts"></div>
+                                    <input type="hidden" id="entry-min-val" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 예상 출차 일시 -->
+                        <div class="input-group">
+                            <label>예상 출차 일시<span class="req">*</span></label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="date" class="input-field" style="flex: 2;" required>
+
+                                <!-- 커스텀 시 선택 -->
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger" id="exit-hour-trigger">
+                                        <span>시</span><i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="custom-select-options" id="exit-hour-opts"></div>
+                                    <input type="hidden" id="exit-hour-val" required>
+                                </div>
+
+                                <!-- 커스텀 분 선택 -->
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger" id="exit-min-trigger">
+                                        <span>분</span><i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="custom-select-options" id="exit-min-opts"></div>
+                                    <input type="hidden" id="exit-min-val" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btn-calc-exec" class="btn-primary" style="margin-top: 10px;">예상 요금
+                            확인</button>
+                    </form>
+
+                    <!-- 계산 결과 영역 -->
+                    <div id="result-calc" class="result-box" style="border-color: var(--primary-color);">
+                        <div style="text-align: center; margin-bottom: 16px;">
+                            <span style="font-size: 13px; color: var(--text-sub);">예상 총 주차요금</span>
+                            <div
+                                style="font-size: 28px; font-weight: bold; color: var(--primary-color); margin-top: 4px;">
+                                8,300원</div>
+                        </div>
+                        <hr>
+                        <div class="info-row"><span>예상 주차 시간</span><strong>3시간 30분</strong></div>
+                        <div class="info-row"><span>기본 요금 (1시간)</span><strong>2,000원</strong></div>
+                        <div class="info-row" style="margin-bottom:0;"><span>추가 요금 (150분)</span><strong>6,300원</strong>
+                        </div>
+                        <p style="font-size: 11px; color: var(--danger-color); margin-top: 16px; text-align: center;">
+                            * 실제 요금은 실제 입/출차 시간에 따라 달라질 수 있습니다.<br>
+                            * 예약 보증금 2,000원은 정산 시 위 요금에서 차감됩니다.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <!-- 5. 정산 메인 -->
+            <!-- 5. 출차/정산 입력 -->
             <div id="page-settle-main" class="page">
                 <div class="content">
-                    <p style="font-size: 14px; font-weight: 500; margin-top: 10px; margin-bottom: 16px;">출차 전 요금을
-                        정산해주세요.</p>
+                    <p style="font-size: 14px; margin-bottom: 16px;">정산을 위해 예약번호를 입력해주세요.</p>
                     <form onsubmit="searchParkingFee(event)">
-                        <div class="input-group"><label for="settle-car-num">예약번호 또는 차량번호<span
-                                    class="req">*</span></label><input type="text" id="settle-car-num"
-                                class="input-field" required></div>
-                        <button type="submit" id="btn-settle-search" class="btn-primary">주차 내역 조회</button>
+                        <div class="input-group">
+                            <label>예약번호<span class="req">*</span></label>
+                            <input type="text" class="input-field" required>
+                        </div>
+                        <button type="submit" class="btn-primary">주차 요금 확인</button>
                     </form>
                 </div>
             </div>
 
-            <!-- 5-1. 정산 상세 및 영수증 (생략 처리) -->
+            <!-- 5-1. 요금 확인 및 결제 -->
             <div id="page-settle-detail" class="page">
                 <div class="content">
-                    <div class="price-text" id="dynamic-fee-display" style="margin-top: 20px;">8,000원</div><button
-                        class="btn-primary" id="btn-pay" onclick="goToPage('page-receipt')">결제하기</button>
+                    <div
+                        style="background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 16px; margin-bottom: 16px; text-align: center;">주차 요금 정산</h3>
+                        <div class="info-row"><span>이용 시간</span><strong>1시간 20분</strong></div>
+                        <div class="info-row"><span>총 주차요금</span><strong>4,000원</strong></div>
+                        <div class="info-row"><span>예약 보증금 차감</span><strong
+                                style="color:var(--danger-color);">-2,000원</strong></div>
+                        <hr>
+                        <div class="info-row" style="margin-bottom: 0; align-items:center;">
+                            <span>출차 시 결제 금액</span>
+                            <strong style="font-size: 24px; color: var(--primary-color);">2,000원</strong>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>출차 결제 수단 선택</label>
+                        <select class="input-field" id="pay-method">
+                            <option>신용/체크카드</option>
+                            <option>현금결제 (무인기 투입)</option>
+                            <option>모바일 간편결제</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-primary" style="margin-top:20px;" onclick="goToPage('page-receipt')">결제
+                        진행하기</button>
                 </div>
             </div>
+
+            <!-- 영수증 -->
             <div id="page-receipt" class="page">
                 <div class="content" style="text-align: center;">
-                    <div class="success-circle"><i class="fas fa-check"></i></div>
-                    <h3>결제 완료</h3><button class="btn-primary" style="margin-top: 24px;"
-                        onclick="goToPage('page-home')">홈으로</button>
+                    <div
+                        style="width: 60px; height: 60px; background: var(--success-color); color: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 28px; margin: 30px auto 20px;">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h3 style="margin-bottom: 8px;">결제 완료 및 출차 처리</h3>
+                    <p style="font-size:13px; color:var(--text-sub); margin-bottom:30px;">영수증 번호: E20250101143000</p>
+
+                    <div style="text-align: left; background:var(--card-bg); padding:16px; border-radius:8px;">
+                        <div class="info-row"><span>최종 결제 금액</span><strong>2,000원</strong></div>
+                        <div class="info-row"><span>결제 수단</span><strong id="receipt-method">신용카드</strong></div>
+                        <div class="info-row" style="margin-bottom:0;"><span>차량번호</span><strong>12가3456</strong></div>
+                    </div>
+
+                    <button class="btn-outline" style="margin-top: 30px;" onclick="goToPage('page-home')">홈으로
+                        돌아가기</button>
                 </div>
             </div>
 
-            <!-- 정보 확인 페이지 -->
+            <!-- 6. 정보 확인 (타워별 탭 및 가능대수/전체대수 반영) -->
             <div id="page-info" class="page">
                 <div class="content">
-                    <div class="section-title">정보 확인 (준비중)</div>
+                    <div class="section-title" style="margin-top: 0;">주차 타워 정보 및 예약 현황</div>
+
+                    <!-- 타워 선택 탭 -->
+                    <div class="tower-tabs">
+                        <button class="tower-tab active" onclick="showTowerInfo('A', this)">A Tower</button>
+                        <button class="tower-tab" onclick="showTowerInfo('B', this)">B Tower</button>
+                        <button class="tower-tab" onclick="showTowerInfo('C', this)">C Tower</button>
+                    </div>
+
+                    <!-- A Tower 상세 정보 -->
+                    <div id="tower-info-A" class="tower-info-content active">
+                        <h3 style="font-size: 15px; margin-bottom: 12px;">A Tower <span class="tower-mini-tag"
+                                style="background:#dcfce7; color:#166534;">여유</span></h3>
+
+                        <!-- 타워별 공통 요금표 배치 -->
+                        <div class="fee-box">
+                            <p style="font-size: 12px; font-weight: 600; color:var(--text-main); margin-bottom: 8px;"><i
+                                    class="fas fa-coins"></i> 이용 요금 안내</p>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>기본 1시간</span><strong>2,000원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>추가 10분당</span><strong>300원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 0;"><span>1일 최대
+                                    요금</span><strong>30,000원</strong></div>
+                        </div>
+
+                        <div class="info-row"><span>운영시간</span><strong>24시간 운영</strong></div>
+                        <div class="info-row"><span>총 수용 대수</span><strong>20대</strong></div>
+                        <hr>
+                        <p style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">차종별 예약 가능 현황 (가능 / 전체)</p>
+                        <div class="info-row"><span>경차</span><strong>3 / 3대</strong></div>
+                        <div class="info-row"><span>중형차</span><strong>5 / 6대</strong></div>
+                        <div class="info-row"><span>SUV</span><strong>2 / 4대</strong></div>
+                        <div class="info-row"><span>대형차</span><strong style="color:var(--danger-color);">만차 (0 /
+                                2대)</strong></div>
+                        <div class="info-row" style="margin-bottom:0;"><span>전기차</span><strong>2 / 5대</strong></div>
+                        <div
+                            style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb; display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; font-weight: 600;">현재 예약 가능</span>
+                            <strong style="color: var(--primary-color);">총 12 / 20대</strong>
+                        </div>
+                    </div>
+
+                    <!-- B Tower 상세 정보 -->
+                    <div id="tower-info-B" class="tower-info-content">
+                        <h3 style="font-size: 15px; margin-bottom: 12px;">B Tower <span class="tower-mini-tag">보통</span>
+                        </h3>
+
+                        <div class="fee-box">
+                            <p style="font-size: 12px; font-weight: 600; color:var(--text-main); margin-bottom: 8px;"><i
+                                    class="fas fa-coins"></i> 이용 요금 안내</p>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>기본 1시간</span><strong>2,000원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>추가 10분당</span><strong>300원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 0;"><span>1일 최대
+                                    요금</span><strong>30,000원</strong></div>
+                        </div>
+
+                        <div class="info-row"><span>운영시간</span><strong>24시간 운영</strong></div>
+                        <div class="info-row"><span>총 수용 대수</span><strong>50대</strong></div>
+                        <hr>
+                        <p style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">차종별 예약 가능 현황 (가능 / 전체)</p>
+                        <div class="info-row"><span>경차</span><strong>1 / 8대</strong></div>
+                        <div class="info-row"><span>중형차</span><strong>2 / 17대</strong></div>
+                        <div class="info-row"><span>SUV</span><strong>1 / 10대</strong></div>
+                        <div class="info-row"><span>대형차</span><strong>1 / 5대</strong></div>
+                        <div class="info-row" style="margin-bottom:0;"><span>전기차</span><strong
+                                style="color:var(--danger-color);">만차 (0 / 10대)</strong></div>
+                        <div
+                            style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb; display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; font-weight: 600;">현재 예약 가능</span>
+                            <strong style="color: var(--primary-color);">총 5 / 50대</strong>
+                        </div>
+                    </div>
+
+                    <!-- C Tower 상세 정보 -->
+                    <div id="tower-info-C" class="tower-info-content">
+                        <h3 style="font-size: 15px; margin-bottom: 12px;">C Tower <span class="tower-mini-tag"
+                                style="background:#fee2e2; color:#991b1b;">혼잡</span></h3>
+
+                        <div class="fee-box">
+                            <p style="font-size: 12px; font-weight: 600; color:var(--text-main); margin-bottom: 8px;"><i
+                                    class="fas fa-coins"></i> 이용 요금 안내</p>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>기본 1시간</span><strong>2,000원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 4px;"><span>추가 10분당</span><strong>300원</strong>
+                            </div>
+                            <div class="info-row" style="margin-bottom: 0;"><span>1일 최대
+                                    요금</span><strong>30,000원</strong></div>
+                        </div>
+
+                        <div class="info-row"><span>운영시간</span><strong>24시간 운영</strong></div>
+                        <div class="info-row"><span>총 수용 대수</span><strong>70대</strong></div>
+                        <hr>
+                        <p style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">차종별 예약 가능 현황 (가능 / 전체)</p>
+                        <div class="info-row" style="margin-bottom:0;"><span>전 차종</span><strong
+                                style="color:var(--danger-color);">만차 (0 / 전체)</strong></div>
+                        <div
+                            style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb; display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; font-weight: 600; color:var(--danger-color);">현재 예약 가능</span>
+                            <strong style="color: var(--danger-color);">총 0 / 70대</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 플로팅 새로고침 버튼 (화면 전체 초기화) -->
-            <div class="floating-refresh" onclick="location.reload()" title="새로고침">
-                <i class="fas fa-sync-alt" style="font-size: 18px;"></i>
+            <!-- 관리자 페이지 -->
+            <div id="page-admin" class="page">
+                <div class="content">
+                    <div class="admin-card" style="padding:16px;">
+                        <h2 style="font-size: 18px; margin-bottom: 4px;">시스템 관리자 메뉴</h2>
+                    </div>
+
+                    <div class="section-title">전체 예약/입차 목록</div>
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>예약번호</th>
+                                    <th>차량번호</th>
+                                    <th>상태</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>A1234</td>
+                                    <td>12가3456</td>
+                                    <td>입차중</td>
+                                    <td><button class="btn-outline" style="padding:4px 8px; margin:0;"
+                                            onclick="alert('입차시간 수정 팝업')">수정</button></td>
+                                </tr>
+                                <tr>
+                                    <td>B5678</td>
+                                    <td>34나1111</td>
+                                    <td>대기중</td>
+                                    <td><button class="btn-outline btn-danger"
+                                            style="padding:4px 8px; margin:0; border:none;"
+                                            onclick="alert('강제 만료 처리됨')">만료</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="section-title">매출 통계 요약</div>
+                    <div
+                        style="background:var(--card-bg); padding:16px; border-radius:12px; border:1px solid var(--border-color); text-align:center;">
+                        <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 8px;">총 결제액 (카드+현금+간편결제)</p>
+                        <div style="font-size: 20px; font-weight: 700; color: #10b981;">₩ 145,000</div>
+                    </div>
+
+                    <div class="section-title">관리자 기능</div>
+                    <button class="btn-outline" onclick="alert('sales_report.csv 파일이 생성되었습니다.')"><i
+                            class="fas fa-file-csv"></i> 매출 통계 CSV 다운로드</button>
+                    <button class="btn-outline" onclick="openModal('modal-log')"><i class="fas fa-terminal"></i> 시스템 로그
+                        확인</button>
+                </div>
             </div>
 
+            <!-- 플로팅 새로고침 버튼 -->
+            <div class="floating-refresh" onclick="location.reload()" title="새로고침"><i class="fas fa-sync-alt"></i></div>
         </div>
 
-        <!-- 하단 네비게이션 (조회 탭 추가, 4개로 분할) -->
+        <!-- 하단 네비게이션 -->
         <div class="bottom-nav" id="global-bottom-nav">
             <div class="nav-item active" id="nav-home" onclick="goToPage('page-home')"><i class="fas fa-home"></i>홈
             </div>
             <div class="nav-item" id="nav-search" onclick="goToPage('page-search')"><i class="fas fa-search"></i>조회
             </div>
-            <div class="nav-item" id="nav-settle" onclick="goToPage('page-settle-main')"><i
-                    class="fas fa-won-sign"></i>정산</div>
-            <div class="nav-item" id="nav-info" onclick="goToPage('page-info')"><i class="fas fa-info-circle"></i>정보
+            <div class="nav-item" id="nav-calc" onclick="goToPage('page-calculator')"><i
+                    class="fas fa-calculator"></i>계산기</div>
+            <div class="nav-item" id="nav-info" onclick="goToPage('page-info')"><i class="fas fa-info-circle"></i>안내
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달(팝업) 영역: 관리자 로그 -->
+    <div class="modal-overlay" id="modal-log">
+        <div class="modal-content" style="background:#1e1e1e; color:#00ff00; font-family:monospace; font-size:11px;">
+            <i class="fas fa-times modal-close" style="color:#fff;" onclick="closeModal('modal-log')"></i>
+            <h3 style="margin-bottom: 12px; font-size:14px; color:#fff;">system_log.txt</h3>
+            <div style="height:200px; overflow-y:auto; line-height:1.5;">
+                [2025-01-01 14:00:00] 프로그램 시작<br>
+                [2025-01-01 14:05:22] 예약 생성 - A1234, 12가3456<br>
+                [2025-01-01 14:10:00] 입차 완료 및 삭제 - A1234<br>
+                [2025-01-01 14:30:15] 출차 완료 - 12가3456, 요금 4000원<br>
             </div>
         </div>
     </div>
 
     <script>
-        // 페이지 라우팅 설정 (조회 및 관리자 추가)
+        // 페이지 라우팅 설정
         const pageConfig = {
             'page-home': { title: '무인 주차 시스템', back: null, nav: 'nav-home' },
             'page-use-menu': { title: '주차장 이용', back: 'page-home', nav: 'nav-home' },
-            'page-entry': { title: '입차', back: 'page-use-menu', nav: 'nav-home' },
-            'page-reserve': { title: '예약', back: 'page-use-menu', nav: 'nav-home' },
-
-            'page-search': { title: '조회하기', back: 'page-home', nav: 'nav-search' },
-            'page-admin': { title: '시스템 관리', back: 'page-search', nav: null }, // 이스터에그 (네비 활성화 없음)
-
-            'page-settle-main': { title: '정산하기', back: 'page-home', nav: 'nav-settle' },
-            'page-settle-detail': { title: '요금 확인 및 결제', back: 'page-settle-main', nav: 'nav-settle' },
-            'page-receipt': { title: '전자 영수증', back: null, nav: 'nav-settle' },
-            'page-info': { title: '정보 확인', back: 'page-home', nav: 'nav-info' }
+            'page-entry': { title: '입차 처리', back: 'page-use-menu', nav: 'nav-home' },
+            'page-reserve': { title: '주차 타워 예약', back: 'page-use-menu', nav: 'nav-home' },
+            'page-search': { title: '조회 및 변경', back: 'page-home', nav: 'nav-search' },
+            'page-reservation-detail': { title: '예약 상세 정보', back: 'page-search', nav: 'nav-search' },
+            'page-find-res': { title: '예약번호 찾기', back: 'page-search', nav: 'nav-search' },
+            'page-calculator': { title: '예상 요금 계산기', back: 'page-home', nav: 'nav-calc' },
+            'page-admin': { title: '시스템 관리', back: 'page-home', nav: null },
+            'page-settle-main': { title: '출차 및 정산', back: 'page-home', nav: 'nav-home' },
+            'page-settle-detail': { title: '요금 확인 및 결제', back: 'page-settle-main', nav: 'nav-home' },
+            'page-receipt': { title: '전자 영수증', back: null, nav: 'nav-home' },
+            'page-info': { title: '주차장 이용 안내', back: 'page-home', nav: 'nav-info' }
         };
 
         function goToPage(pageId) {
@@ -619,10 +1190,8 @@
             const targetPage = document.getElementById(pageId);
             if (targetPage) targetPage.classList.add('active');
 
-            // 페이지 이동 시 조회결과창 등 초기화
-            document.getElementById('search-result-area').classList.remove('active');
-            document.getElementById('search-input').value = '';
-
+            document.getElementById('result-find-res').classList.remove('active');
+            document.getElementById('result-calc').classList.remove('active');
             document.querySelectorAll('.content').forEach(c => c.scrollTop = 0);
 
             const config = pageConfig[pageId];
@@ -639,43 +1208,167 @@
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                 if (config.nav) document.getElementById(config.nav).classList.add('active');
             }
+
+            if (pageId === 'page-receipt') {
+                const method = document.getElementById('pay-method').value;
+                document.getElementById('receipt-method').innerText = method;
+            }
         }
 
-        // 조회 로직 및 이스터에그 (admin1234)
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // 조회 실행 로직
         function handleSearch(event) {
             event.preventDefault();
             const inputVal = document.getElementById('search-input').value.trim();
             const btn = document.getElementById('btn-search-exec');
 
-            // 이스터에그: admin1234 입력 시 관리자 페이지로 몰래 이동
-            if (inputVal === 'admin1234') {
+            if (inputVal === 'admin') {
+                document.getElementById('search-input').value = '';
                 goToPage('page-admin');
                 return;
             }
 
-            // 일반 사용자 조회 시뮬레이션
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 조회 중...';
-            document.getElementById('search-result-area').classList.remove('active');
 
             setTimeout(() => {
-                document.getElementById('res-car').innerText = inputVal;
-                document.getElementById('search-result-area').classList.add('active');
-
                 btn.disabled = false;
                 btn.innerHTML = '조회하기';
-            }, 800);
+                goToPage('page-reservation-detail');
+
+                if (inputVal.toUpperCase().startsWith('A')) {
+                    document.getElementById('detail-reserved').style.display = 'none';
+                    document.getElementById('detail-entered').style.display = 'block';
+                } else {
+                    document.getElementById('detail-reserved').style.display = 'block';
+                    document.getElementById('detail-entered').style.display = 'none';
+                }
+            }, 600);
+        }
+
+        // 타워 정보 탭 전환 함수
+        function showTowerInfo(towerName, btnElement) {
+            document.querySelectorAll('.tower-tab').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            document.querySelectorAll('.tower-info-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById('tower-info-' + towerName).classList.add('active');
+        }
+
+        // ★ 커스텀 셀렉트(시간/분) 생성 로직
+        function setupCustomSelects() {
+            function createOptionsHTML(max, suffix) {
+                let html = '';
+                for (let i = 0; i <= max; i++) {
+                    let val = String(i).padStart(2, '0');
+                    html += `<div class="custom-option" data-val="${val}">${val}${suffix}</div>`;
+                }
+                return html;
+            }
+
+            // HTML 생성 및 주입
+            document.getElementById('entry-hour-opts').innerHTML = createOptionsHTML(23, '시');
+            document.getElementById('exit-hour-opts').innerHTML = createOptionsHTML(23, '시');
+            document.getElementById('entry-min-opts').innerHTML = createOptionsHTML(59, '분');
+            document.getElementById('exit-min-opts').innerHTML = createOptionsHTML(59, '분');
+
+            // 이벤트 바인딩
+            document.querySelectorAll('.custom-select-wrapper').forEach(wrapper => {
+                const trigger = wrapper.querySelector('.custom-select-trigger');
+                const optionsLayer = wrapper.querySelector('.custom-select-options');
+                const hiddenInput = wrapper.querySelector('input[type="hidden"]');
+
+                // 토글 열기
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // 다른 열린 셀렉트 닫기
+                    document.querySelectorAll('.custom-select-options').forEach(opt => {
+                        if (opt !== optionsLayer) opt.classList.remove('open');
+                    });
+                    optionsLayer.classList.toggle('open');
+                });
+
+                // 옵션 클릭
+                optionsLayer.querySelectorAll('.custom-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const val = option.getAttribute('data-val');
+                        const text = option.innerText;
+
+                        trigger.querySelector('span').innerText = text;
+                        trigger.classList.add('selected');
+                        hiddenInput.value = val;
+
+                        optionsLayer.classList.remove('open');
+                    });
+                });
+            });
+
+            // 화면 외부 클릭 시 드롭다운 닫기
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.custom-select-options').forEach(opt => {
+                    opt.classList.remove('open');
+                });
+            });
+        }
+
+        // 폼 제출 방지 및 Alert 로직
+        function handleCancelReservation() {
+            if (confirm("정말 예약을 취소하시겠습니까?\n결제된 보증금 2,000원은 환불되지 않습니다.")) {
+                alert("예약이 안전하게 취소되었습니다.");
+                document.getElementById('search-input').value = '';
+                goToPage('page-home');
+            }
+        }
+
+        function handleFindRes(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btn-find-exec');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 찾는 중...';
+            document.getElementById('result-find-res').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('result-find-res').classList.add('active');
+                btn.disabled = false;
+                btn.innerHTML = '예약번호 찾기';
+            }, 600);
+        }
+
+        function handleCalculate(event) {
+            event.preventDefault();
+            // 커스텀 셀렉트 유효성 검사
+            const hiddenInputs = ['entry-hour-val', 'entry-min-val', 'exit-hour-val', 'exit-min-val'];
+            for (let id of hiddenInputs) {
+                if (!document.getElementById(id).value) {
+                    alert('시간과 분을 모두 선택해주세요.');
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('btn-calc-exec');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 계산 중...';
+            document.getElementById('result-calc').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('result-calc').classList.add('active');
+                btn.disabled = false;
+                btn.innerHTML = '예상 요금 확인';
+            }, 500);
         }
 
         function submitEntry(event) {
             event.preventDefault();
-            alert('입차가 완료되었습니다.');
+            alert('입차가 정상적으로 처리되었습니다. 안전 주차 하세요.');
             goToPage('page-home');
         }
 
         function submitReserve(event) {
             event.preventDefault();
-            alert('예약이 완료되었습니다.');
+            alert('예약 보증금 2,000원이 결제되었으며, 예약이 완료되었습니다.\n예약번호: [A1234]\n반드시 20분 내에 입차해주세요.');
             goToPage('page-home');
         }
 
@@ -685,6 +1378,7 @@
         }
 
         window.onload = () => {
+            setupCustomSelects(); // 커스텀 셀렉트 렌더링 호출
             goToPage('page-home');
         };
     </script>
