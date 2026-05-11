@@ -108,12 +108,12 @@ int rebuild_tower_current_from_reservations(void) {
         ParkingTower t;
         if (read_record_at(TOWERS_FILE, i, &t, sizeof(t)) == 0 && t.active) {
             for (int type = 1; type <= CAR_TYPE_COUNT; type++) t.current[type] = 0;
-            int res_count = count_records(RESERVATIONS_FILE, sizeof(Reservation));
-            for (int j = 0; j < res_count; j++) {
-                Reservation r;
-                if (read_record_at(RESERVATIONS_FILE, j, &r, sizeof(r)) == 0 && r.status == RES_ENTERED && r.tower_id == t.id) {
-                    if (r.car_type >= 1 && r.car_type <= CAR_TYPE_COUNT && t.current[r.car_type] < t.capacity[r.car_type]) {
-                        t.current[r.car_type]++;
+            int parking_count = count_records(PARKING_FILE, sizeof(ParkingRecord));
+            for (int j = 0; j < parking_count; j++) {
+                ParkingRecord p;
+                if (read_record_at(PARKING_FILE, j, &p, sizeof(p)) == 0 && p.tower_id == t.id) {
+                    if (p.car_type >= 1 && p.car_type <= CAR_TYPE_COUNT && t.current[p.car_type] < t.capacity[p.car_type]) {
+                        t.current[p.car_type]++;
                     }
                 }
             }

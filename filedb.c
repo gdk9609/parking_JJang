@@ -51,6 +51,7 @@ int ensure_data_files(void) {
 
     if (truncate_if_broken_record_file(TOWERS_FILE, sizeof(ParkingTower)) < 0) return -1;
     if (truncate_if_broken_record_file(RESERVATIONS_FILE, sizeof(Reservation)) < 0) return -1;
+    if (truncate_if_broken_record_file(PARKING_FILE, sizeof(ParkingRecord)) < 0) return -1;
     if (truncate_if_broken_record_file(PAYMENTS_FILE, sizeof(Payment)) < 0) return -1;
 
     if (init_default_towers() < 0) return -1;
@@ -181,6 +182,39 @@ int append_text_line(const char *path, const char *line) {
         }
     }
     close(fd);
+    return 0;
+}
+
+
+int delete_text_lines_matching(const char *path, const char *keyword1, const char *keyword2) {
+    if (!path) return -1;
+
+    FILE *src = fopen(path, "r");
+    if (!src) return -1;
+
+    char tmp_path[256];
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path);
+    FILE *dst = fopen(tmp_path, "w");
+    if (!dst) {
+        fclose(src);
+        return -1;
+    }
+
+    char line[1024];
+    while (fgets(line, sizeof(line), src)) {
+        int matched = 0;
+        if (keyword1 && keyword1[0] && strstr(line, keyword1)) matched = 1;
+        if (keyword2 && keyword2[0] && strstr(line, keyword2)) matched = 1;
+        if (!matched) fputs(line, dst);
+    }
+
+    fclose(src);
+    fclose(dst);
+
+    if (rename(tmp_path, path) < 0) {
+        unlink(tmp_path);
+        return -1;
+    }
     return 0;
 }
 

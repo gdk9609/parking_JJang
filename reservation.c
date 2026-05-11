@@ -3,10 +3,49 @@
 #include <time.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <ctype.h>
 #include "parking.h"
 
 static pthread_t expire_thread_id;
 static int expire_thread_running = 0;
+
+static int parking_code_exists_in_payments(const char *code) {
+    int count = count_records(PAYMENTS_FILE, sizeof(Payment));
+    for (int i = 0; i < count; i++) {
+        Payment p;
+        if (read_record_at(PAYMENTS_FILE, i, &p, sizeof(p)) == 0 && strcmp(p.reservation_code, code) == 0) return 1;
+    }
+    return 0;
+}
+
+static int reservation_code_exists_anywhere(const char *code) {
+    if (find_reservation_by_code(code, NULL, NULL)) return 1;
+    if (find_parking_by_code(code, NULL, NULL)) return 1;
+    if (parking_code_exists_in_payments(code)) return 1;
+    return 0;
+}
+
+static void make_random_reservation_code(char *out, size_t size) {
+    const char *chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const int char_count = 62;
+    if (!out || size < 6) return;
+
+    for (int attempt = 0; attempt < 10000; attempt++) {
+        int has_upper = 0;
+        int has_lower = 0;
+        for (int i = 0; i < 5; i++) {
+            char c = chars[rand() % char_count];
+            out[i] = c;
+            if (isupper((unsigned char)c)) has_upper = 1;
+            if (islower((unsigned char)c)) has_lower = 1;
+        }
+        out[5] = '\0';
+        if (has_upper && has_lower && !reservation_code_exists_anywhere(out)) return;
+    }
+
+    snprintf(out, size, "A%04d", rand() % 10000);
+}
 
 static int has_active_reservation_for_car(const char *car_number) {
     int count = count_records(RESERVATIONS_FILE, sizeof(Reservation));
@@ -14,11 +53,15 @@ static int has_active_reservation_for_car(const char *car_number) {
     for (int i = 0; i < count; i++) {
         Reservation r;
         if (read_record_at(RESERVATIONS_FILE, i, &r, sizeof(r)) == 0) {
-            if (strcmp(r.car_number, car_number) == 0) {
-                if (r.status == RES_RESERVED && difftime(now, r.reserved_at) <= RESERVATION_TIMEOUT_SECONDS) return 1;
-                if (r.status == RES_ENTERED) return 1;
-            }
+            if (strcmp(r.car_number, car_number) == 0 && r.status == RES_RESERVED &&
+                difftime(now, r.reserved_at) <= RESERVATION_TIMEOUT_SECONDS) return 1;
         }
+    }
+
+    count = count_records(PARKING_FILE, sizeof(ParkingRecord));
+    for (int i = 0; i < count; i++) {
+        ParkingRecord p;
+        if (read_record_at(PARKING_FILE, i, &p, sizeof(p)) == 0 && strcmp(p.car_number, car_number) == 0) return 1;
     }
     return 0;
 }
@@ -37,6 +80,51 @@ static int remaining_seconds_for_reservation(const Reservation *r) {
     int elapsed = (int)difftime(now_time(), r->reserved_at);
     int remaining = RESERVATION_TIMEOUT_SECONDS - elapsed;
     return remaining > 0 ? remaining : 0;
+}
+
+static void show_towers_for_selected_car_type(int car_type) {
+    int count = count_records(TOWERS_FILE, sizeof(ParkingTower));
+    printf("\n%s 기준 주차타워 목록\n", car_type_name(car_type));
+    for (int i = 0; i < count; i++) {
+        ParkingTower t;
+        if (read_record_at(TOWERS_FILE, i, &t, sizeof(t)) == 0 && t.active) {
+            int available = get_available_slots(t.id, car_type);
+            printf("%d. %s / 남은 %s 자리 %d대 / 운영시간 %s\n",
+                   t.id, t.name, car_type_name(car_type), available, t.operating_hours);
+        }
+    }
+}
+
+static int choose_tower_after_car_type(int car_type) {
+    int recommended = recommend_tower_for_car_type(car_type);
+
+    show_towers_for_selected_car_type(car_type);
+    if (recommended == 0) {
+        printf("현재 해당 차종으로 예약 가능한 주차타워가 없습니다.\n");
+        return 0;
+    }
+
+    ParkingTower rec_tower;
+    if (get_tower_by_id(recommended, &rec_tower, NULL)) {
+        printf("\n추천 타워: %s / 남은 %s 자리 %d대\n",
+               rec_tower.name, car_type_name(car_type), get_available_slots(recommended, car_type));
+        if (ask_yes_no("추천 타워로 배정하시겠습니까? (y/n): ")) return recommended;
+    }
+
+    while (1) {
+        int tower_id = read_int("주차타워 선택: ", 1, 999);
+        ParkingTower t;
+        if (!get_tower_by_id(tower_id, &t, NULL)) {
+            printf("존재하지 않는 주차타워입니다. 다시 선택하세요.\n");
+            continue;
+        }
+        int available = get_available_slots(tower_id, car_type);
+        if (available <= 0) {
+            printf("선택한 타워에는 %s 예약 가능 자리가 없습니다. 다시 선택하세요.\n", car_type_name(car_type));
+            continue;
+        }
+        return tower_id;
+    }
 }
 
 int next_reservation_id(void) {
@@ -137,7 +225,7 @@ void create_reservation(void) {
     Reservation r;
     memset(&r, 0, sizeof(r));
     r.id = next_reservation_id();
-    snprintf(r.code, sizeof(r.code), "R%06d", r.id);
+    make_random_reservation_code(r.code, sizeof(r.code));
 
     print_line();
     printf("주차 예약\n");
@@ -152,31 +240,9 @@ void create_reservation(void) {
     }
     read_phone_number(r.phone, sizeof(r.phone));
 
-    r.tower_id = choose_tower();
     r.car_type = choose_car_type();
-
-    int recommended = recommend_tower_for_car_type(r.car_type);
-    if (recommended == 0) {
-        printf("현재 해당 차종으로 예약 가능한 타워가 없습니다.\n");
-        return;
-    }
-
-    ParkingTower rec_tower;
-    get_tower_by_id(recommended, &rec_tower, NULL);
-    printf("\n추천 타워: %s / 남은 %s 자리 %d대\n", rec_tower.name, car_type_name(r.car_type), get_available_slots(recommended, r.car_type));
-    if (recommended != r.tower_id) {
-        if (ask_yes_no("추천 타워로 배정하시겠습니까? (y/n): ")) r.tower_id = recommended;
-    }
-
-    int available = get_available_slots(r.tower_id, r.car_type);
-    if (available <= 0) {
-        printf("선택한 주차타워에는 해당 차종의 예약 가능 자리가 없습니다.\n");
-        if (recommended != r.tower_id && ask_yes_no("추천 타워로 다시 배정하시겠습니까? (y/n): ")) {
-            r.tower_id = recommended;
-        } else {
-            return;
-        }
-    }
+    r.tower_id = choose_tower_after_car_type(r.car_type);
+    if (r.tower_id == 0) return;
 
     r.reserved_at = now_time();
     r.entry_time = 0;
@@ -219,16 +285,19 @@ void lookup_reservation(void) {
     char code[MAX_CODE];
     Reservation r;
     int index;
-    char reserved_at[64], entry_time[64], exit_time[64];
+    char reserved_at[64];
     printf("예약번호 입력: ");
     safe_read_line(code, sizeof(code));
     if (!find_reservation_by_code(code, &r, &index)) {
-        printf("해당 예약번호를 찾을 수 없습니다. 만료된 예약은 자동 삭제되었을 수 있습니다.\n");
+        ParkingRecord p;
+        if (find_parking_by_code(code, &p, NULL)) {
+            printf("이미 입차 완료된 차량입니다. 입차 후에는 예약목록에서 삭제되고 현재 입차 차량 데이터로 관리됩니다.\n");
+            return;
+        }
+        printf("해당 예약번호를 찾을 수 없습니다. 만료, 입차, 출차 처리된 예약은 예약목록에서 삭제되었을 수 있습니다.\n");
         return;
     }
     format_time(r.reserved_at, reserved_at, sizeof(reserved_at));
-    format_time(r.entry_time, entry_time, sizeof(entry_time));
-    format_time(r.exit_time, exit_time, sizeof(exit_time));
     print_line();
     printf("예약 조회 결과\n");
     print_line();
@@ -239,27 +308,12 @@ void lookup_reservation(void) {
     printf("주차타워: %c Tower\n", 'A' + r.tower_id - 1);
     printf("운영시간: %s\n", DEFAULT_OPERATING_HOURS);
     printf("예약시각: %s\n", reserved_at);
-    printf("입차시각: %s\n", entry_time);
-    printf("출차시각: %s\n", exit_time);
     printf("상태: %s\n", reservation_status_name(r.status));
     if (r.status == RES_RESERVED) {
         int rem = remaining_seconds_for_reservation(&r);
         printf("입차 제한시간 카운트다운: %d분 %d초 안에 입차해야 합니다.\n", rem / 60, rem % 60);
     }
-    if (r.status == RES_ENTERED) {
-        int elapsed = seconds_to_minutes_ceil(r.entry_time, now_time());
-        int expected_fee = calculate_parking_fee(elapsed);
-        int final_fee = expected_fee - RESERVATION_DEPOSIT;
-        char duration[64];
-        if (final_fee < 0) final_fee = 0;
-        format_duration_minutes(elapsed, duration, sizeof(duration));
-        printf("입차 경과시간: %s\n", duration);
-        printf("현재 예상요금: %d원 / 보증금 차감 후 예상 정산금액: %d원\n", expected_fee, final_fee);
-    }
     printf("예약보증금: %d원\n", r.deposit);
-    printf("보증금 미반환 여부: %s\n", r.deposit_forfeited ? "예" : "아니오");
-    printf("총 주차요금: %d원\n", r.total_fee);
-    printf("최종 정산금액: %d원\n", r.final_paid);
     print_line();
 }
 
@@ -271,7 +325,7 @@ void cancel_reservation(void) {
     printf("취소할 예약번호 입력: ");
     safe_read_line(code, sizeof(code));
     if (!find_reservation_by_code(code, &r, &index)) {
-        printf("해당 예약번호를 찾을 수 없습니다.\n");
+        printf("해당 예약번호를 찾을 수 없습니다. 이미 입차/만료/출차 처리되었을 수 있습니다.\n");
         return;
     }
     if (r.status != RES_RESERVED) {
@@ -279,16 +333,14 @@ void cancel_reservation(void) {
         return;
     }
     if (!ask_yes_no("정말 예약을 취소하시겠습니까? (y/n): ")) return;
-    r.status = RES_CANCELLED;
-    r.deposit_forfeited = 0;
-    if (update_reservation(&r, index) < 0) {
-        printf("예약 취소 저장에 실패했습니다.\n");
+    if (delete_record_at(RESERVATIONS_FILE, index, sizeof(Reservation)) < 0) {
+        printf("예약 취소 삭제에 실패했습니다.\n");
         return;
     }
     char logbuf[256];
-    snprintf(logbuf, sizeof(logbuf), "예약 취소 - 예약번호 %s, 차량번호 %s", r.code, r.car_number);
+    snprintf(logbuf, sizeof(logbuf), "예약 취소 삭제 - 예약번호 %s, 차량번호 %s", r.code, r.car_number);
     write_log_msg(logbuf);
-    printf("예약이 취소되었습니다.\n");
+    printf("예약이 취소되어 예약목록에서 삭제되었습니다.\n");
 }
 
 void change_reservation(void) {
@@ -299,7 +351,7 @@ void change_reservation(void) {
     printf("변경할 예약번호 입력: ");
     safe_read_line(code, sizeof(code));
     if (!find_reservation_by_code(code, &r, &index)) {
-        printf("해당 예약번호를 찾을 수 없습니다.\n");
+        printf("해당 예약번호를 찾을 수 없습니다. 이미 입차/만료/출차 처리되었을 수 있습니다.\n");
         return;
     }
     if (r.status != RES_RESERVED) {
@@ -315,21 +367,12 @@ void change_reservation(void) {
     printf("현재 남은 입차 제한시간: %d분 %d초\n", rem / 60, rem % 60);
     printf("주의: 예약을 변경해도 20분 제한시간은 새로 늘어나지 않습니다.\n");
 
-    int new_tower = choose_tower();
     int new_type = choose_car_type();
-    int recommended = recommend_tower_for_car_type(new_type);
-    if (recommended != 0 && recommended != new_tower) {
-        ParkingTower rt;
-        get_tower_by_id(recommended, &rt, NULL);
-        printf("추천 타워: %s / 남은 %s 자리 %d대\n", rt.name, car_type_name(new_type), get_available_slots(recommended, new_type));
-        if (ask_yes_no("추천 타워로 변경하시겠습니까? (y/n): ")) new_tower = recommended;
-    }
-    if (get_available_slots(new_tower, new_type) <= 0) {
-        printf("변경하려는 타워에는 해당 차종의 예약 가능 자리가 없습니다.\n");
-        return;
-    }
-    r.tower_id = new_tower;
+    int new_tower = choose_tower_after_car_type(new_type);
+    if (new_tower == 0) return;
+
     r.car_type = new_type;
+    r.tower_id = new_tower;
     if (update_reservation(&r, index) < 0) {
         printf("예약 변경 저장에 실패했습니다.\n");
         return;
@@ -354,18 +397,27 @@ void find_reservation_code_by_identity(void) {
     for (int i = 0; i < count; i++) {
         Reservation r;
         if (read_record_at(RESERVATIONS_FILE, i, &r, sizeof(r)) == 0) {
-            if (strcmp(r.car_number, car_number) == 0 && strcmp(r.phone, phone) == 0 &&
-                (r.status == RES_RESERVED || r.status == RES_ENTERED)) {
+            if (strcmp(r.car_number, car_number) == 0 && strcmp(r.phone, phone) == 0 && r.status == RES_RESERVED) {
                 found = 1;
-                printf("예약번호: %s / 상태: %s / %c Tower / %s\n", r.code, reservation_status_name(r.status), 'A' + r.tower_id - 1, car_type_name(r.car_type));
-                if (r.status == RES_RESERVED) {
-                    int rem = remaining_seconds_for_reservation(&r);
-                    printf("남은 입차 제한시간: %d분 %d초\n", rem / 60, rem % 60);
-                }
+                printf("예약번호: %s / 상태: 예약 완료 / %c Tower / %s\n", r.code, 'A' + r.tower_id - 1, car_type_name(r.car_type));
+                int rem = remaining_seconds_for_reservation(&r);
+                printf("남은 입차 제한시간: %d분 %d초\n", rem / 60, rem % 60);
             }
         }
     }
-    if (!found) printf("차량번호와 전화번호가 일치하는 활성 예약이 없습니다.\n");
+
+    count = count_records(PARKING_FILE, sizeof(ParkingRecord));
+    for (int i = 0; i < count; i++) {
+        ParkingRecord p;
+        if (read_record_at(PARKING_FILE, i, &p, sizeof(p)) == 0) {
+            if (strcmp(p.car_number, car_number) == 0 && strcmp(p.phone, phone) == 0) {
+                found = 1;
+                printf("예약번호: %s / 상태: 입차 완료 / %c Tower / %s\n",
+                       p.reservation_code, 'A' + p.tower_id - 1, car_type_name(p.car_type));
+            }
+        }
+    }
+    if (!found) printf("차량번호와 전화번호가 일치하는 활성 예약 또는 입차 내역이 없습니다.\n");
     print_line();
 }
 
@@ -376,23 +428,23 @@ void lookup_entered_parking_status(void) {
     int found = 0;
     read_car_number(car_number, sizeof(car_number));
     read_phone_number(phone, sizeof(phone));
-    int count = count_records(RESERVATIONS_FILE, sizeof(Reservation));
+    int count = count_records(PARKING_FILE, sizeof(ParkingRecord));
     print_line();
     printf("입차 내역 및 현재 예상요금 조회\n");
     print_line();
     for (int i = 0; i < count; i++) {
-        Reservation r;
-        if (read_record_at(RESERVATIONS_FILE, i, &r, sizeof(r)) == 0) {
-            if (strcmp(r.car_number, car_number) == 0 && strcmp(r.phone, phone) == 0 && r.status == RES_ENTERED) {
+        ParkingRecord p;
+        if (read_record_at(PARKING_FILE, i, &p, sizeof(p)) == 0) {
+            if (strcmp(p.car_number, car_number) == 0 && strcmp(p.phone, phone) == 0) {
                 char entry[64], duration[64];
-                int elapsed = seconds_to_minutes_ceil(r.entry_time, now_time());
+                int elapsed = seconds_to_minutes_ceil(p.entry_time, now_time());
                 int expected_fee = calculate_parking_fee(elapsed);
                 int final_fee = expected_fee - RESERVATION_DEPOSIT;
                 if (final_fee < 0) final_fee = 0;
-                format_time(r.entry_time, entry, sizeof(entry));
+                format_time(p.entry_time, entry, sizeof(entry));
                 format_duration_minutes(elapsed, duration, sizeof(duration));
                 found = 1;
-                printf("예약번호: %s\n", r.code);
+                printf("예약번호: %s\n", p.reservation_code);
                 printf("입차시간: %s\n", entry);
                 printf("입차 경과시간: %s\n", duration);
                 printf("현재 예상 주차요금: %d원\n", expected_fee);
@@ -411,7 +463,7 @@ void show_all_reservations(void) {
     printf("전체 예약 목록\n");
     print_line();
     if (count == 0) {
-        printf("예약 기록이 없습니다.\n");
+        printf("예약 기록이 없습니다. 입차 완료된 차량은 현재 입차 차량 목록에서 확인하세요.\n");
         print_line();
         return;
     }
@@ -435,22 +487,22 @@ void show_all_reservations(void) {
 
 void show_entered_reservations(void) {
     expire_old_reservations();
-    int count = count_records(RESERVATIONS_FILE, sizeof(Reservation));
+    int count = count_records(PARKING_FILE, sizeof(ParkingRecord));
     print_line();
     printf("현재 입차 차량 목록\n");
     print_line();
     int found = 0;
     for (int i = 0; i < count; i++) {
-        Reservation r;
+        ParkingRecord p;
         char entry[64], duration[64];
-        if (read_record_at(RESERVATIONS_FILE, i, &r, sizeof(r)) == 0 && r.status == RES_ENTERED) {
-            int elapsed = seconds_to_minutes_ceil(r.entry_time, now_time());
+        if (read_record_at(PARKING_FILE, i, &p, sizeof(p)) == 0) {
+            int elapsed = seconds_to_minutes_ceil(p.entry_time, now_time());
             int expected_fee = calculate_parking_fee(elapsed);
             found = 1;
-            format_time(r.entry_time, entry, sizeof(entry));
+            format_time(p.entry_time, entry, sizeof(entry));
             format_duration_minutes(elapsed, duration, sizeof(duration));
             printf("%s | %s | %s | %c Tower | 입차 %s | 경과 %s | 현재예상요금 %d원\n",
-                   r.code, r.car_number, car_type_name(r.car_type), 'A' + r.tower_id - 1, entry, duration, expected_fee);
+                   p.reservation_code, p.car_number, car_type_name(p.car_type), 'A' + p.tower_id - 1, entry, duration, expected_fee);
         }
     }
     if (!found) printf("현재 입차 중인 차량이 없습니다.\n");

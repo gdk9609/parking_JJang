@@ -8,7 +8,7 @@
 #define TOWERS_FILE "data/towers.dat"
 #define RESERVATIONS_FILE "data/reservations.dat"
 #define PARKING_FILE "data/parking.dat"
-#define PAYMENTS_FILE "data/payments.dat"
+#define PAYMENTS_FILE "data/receipt_records.dat"
 #define LOG_FILE "data/log.txt"
 #define MESSAGES_FILE "data/messages.txt"
 #define RECEIPTS_FILE "data/receipts.txt"
@@ -30,7 +30,7 @@
 #define EXTRA_UNIT_FEE 300
 #define DAILY_MAX_FEE 30000
 
-#define ADMIN_PASSWORD "admin1234"
+#define ADMIN_ID "JJANG"
 
 #define DEFAULT_OPERATING_HOURS "24시간 운영"
 
@@ -78,6 +78,18 @@ typedef struct {
     int total_fee;
     int final_paid;
 } Reservation;
+
+typedef struct {
+    int id;
+    char reservation_code[MAX_CODE];
+    char car_number[MAX_NAME];
+    char phone[MAX_PHONE];
+    int tower_id;
+    int car_type;
+    time_t reserved_at;
+    time_t entry_time;
+    int deposit;
+} ParkingRecord;
 
 typedef struct {
     int id;
@@ -130,6 +142,7 @@ int update_record_at(const char *path, int index, const void *record, size_t siz
 int delete_record_at(const char *path, int index, size_t size);
 int count_records(const char *path, size_t size);
 int append_text_line(const char *path, const char *line);
+int delete_text_lines_matching(const char *path, const char *keyword1, const char *keyword2);
 void print_text_file(const char *path);
 
 void write_log_msg(const char *action);
@@ -169,6 +182,10 @@ void show_all_reservations(void);
 void show_entered_reservations(void);
 int next_reservation_id(void);
 
+int next_parking_id(void);
+int append_parking_record(const ParkingRecord *parking);
+int find_parking_by_code(const char *code, ParkingRecord *parking, int *index_out);
+int delete_parking_record(int index);
 void process_entry(void);
 void process_exit_and_payment(void);
 
@@ -181,8 +198,7 @@ void print_receipt(const Payment *p);
 void save_receipt_text(const Payment *p);
 
 void admin_menu(void);
-void admin_modify_reservation(void);
-void admin_modify_payment(void);
+void admin_modify_entry_time(void);
 void user_menu(void);
 
 void handle_sigint(int sig);
